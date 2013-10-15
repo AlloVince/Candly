@@ -1,79 +1,104 @@
 <!DOCTYPE html>
-<html>
-
-  <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="EvaFinance : " />
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>EvaFinance</title>
-  </head>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <body>
+    <link rel="stylesheet" href="semantic/css/semantic.css">
+    <link rel="stylesheet" href="css/font-awesome.css">
+    <link rel="stylesheet" href="css/finance.css">
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/AlloVince/EvaFinance">View on GitHub</a>
+    <!--[if lte IE 8]>
+    <script src="js/html5shiv.js" charset="utf-8"></script>
+    <script src="js/respond.min.js" charset="utf-8"></script>
+    <script src="js/jquery-1.9.1.min.js" charset="utf-8"></script>
+    <script src="js/r2d3.js" charset="utf-8"></script>
+    <![endif]-->
+    <!--[if gte IE 9]><!-->
+    <script src="js/d3.js"></script>
+    <script src="js/jquery-2.0.3.min.js"></script>
+    <!--<![endif]-->
+    <script src="js/jquery.easing.min.js"></script>
+    <script src="semantic/javascript/semantic.js"></script>
+    <script src="js/tmpl.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/numeral.js"></script>
+    <script src="js/evafinance.js"></script>
+    <script src="js/evafinance-ui.js"></script>
+</head>
+<body>
 
-          <h1 id="project_title">EvaFinance</h1>
-          <h2 id="project_tagline"></h2>
+    <nav id="nav" class="ui menu inverted">
 
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/AlloVince/EvaFinance/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/AlloVince/EvaFinance/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
+        <div class="container">
+            <div class="title item">
+                <b>EvaFinance</b>
+            </div>
+
+            <a class="blue item tobe-highlight" href="/" data-highlight-url="^/$">
+                <i class="home icon"></i> Top 
+            </a>
+            <a class="red item tobe-highlight" href="/forex" data-highlight-url="^/forex.*$">
+                Quick Start
+            </a>
+            <a class="green item tobe-highlight" href="/commodity" data-highlight-url="^/commodity.*$">
+                Usages
+            </a>
+            <a class="orange item tobe-highlight" href="/bond" data-highlight-url="^/bond.*$">
+                Download
+            </a>
+            <div class="right menu">
+                <a class="item" href="/login">Github</a>
+            </div>
+        </div>
+
+    </nav>
+
+
+
+    <div class="main container">
+        <div class="sticky-wrapper stuck" style="height: 132px;"><div class="peek">
+                <div class="ui vertical pointing secondary menu">
+                    <a class="item active">Types</a>
+                    <a class="item">Elements</a>
+                    <a class="item">States</a>
+                    <a class="item">Variations</a>
+                </div>
+        </div></div>
+
+        <h2 class="ui dividing header">Types</h2>
+
+        <div id="basic"></div>
+
+        <script>
+            var data = [{"start":1381820641,"end":1381820700,"open":1271.43,"close":1271.49,"high":1271.51,"low":1271.29,"price":1271.49,"volume":3299},{"start":1381820581,"end":1381820640,"open":1271.86,"close":1271.53,"high":1271.97,"low":1271.53,"price":1271.53,"volume":323},{"start":1381820521,"end":1381820580,"open":1271.92,"close":1271.85,"high":1272,"low":1271.85,"price":1271.85,"volume":731},{"start":1381820461,"end":1381820520,"open":1271.96,"close":1271.96,"high":1272.04,"low":1271.85,"price":1271.96,"volume":1571},{"start":1381820401,"end":1381820460,"open":1272.29,"close":1271.9,"high":1272.29,"low":1271.9,"price":1271.9,"volume":2062},{"start":1381820341,"end":1381820400,"open":1272.5,"close":1272.48,"high":1272.66,"low":1272.46,"price":1272.48,"volume":2845},{"start":1381820281,"end":1381820340,"open":1272.34,"close":1272.29,"high":1272.56,"low":1272.24,"price":1272.29,"volume":706},{"start":1381820221,"end":1381820280,"open":1272.41,"close":1272.34,"high":1272.44,"low":1272.13,"price":1272.34,"volume":1805},{"start":1381820161,"end":1381820220,"open":1272.43,"close":1272.42,"high":1272.56,"low":1272.35,"price":1272.42,"volume":641},{"start":1381820101,"end":1381820160,"open":1272.53,"close":1272.44,"high":1272.64,"low":1272.44,"price":1272.44,"volume":942},{"start":1381820041,"end":1381820100,"open":1272.71,"close":1272.56,"high":1272.71,"low":1272.43,"price":1272.56,"volume":1685},{"start":1381819981,"end":1381820040,"open":1272.41,"close":1272.52,"high":1272.61,"low":1272.26,"price":1272.52,"volume":2066},{"start":1381819921,"end":1381819980,"open":1272.18,"close":1272.41,"high":1272.72,"low":1272.13,"price":1272.41,"volume":2633},{"start":1381819861,"end":1381819920,"open":1271.93,"close":1272.28,"high":1272.28,"low":1271.89,"price":1272.28,"volume":1370},{"start":1381819801,"end":1381819860,"open":1271.85,"close":1271.81,"high":1272.07,"low":1271.67,"price":1271.81,"volume":3446},{"start":1381819741,"end":1381819800,"open":1271.84,"close":1271.86,"high":1271.91,"low":1271.8,"price":1271.86,"volume":662},{"start":1381819681,"end":1381819740,"open":1272.23,"close":1271.77,"high":1272.25,"low":1271.77,"price":1271.77,"volume":723},{"start":1381819621,"end":1381819680,"open":1271.91,"close":1272.24,"high":1272.33,"low":1271.91,"price":1272.24,"volume":1350},{"start":1381819561,"end":1381819620,"open":1272.08,"close":1271.84,"high":1272.2,"low":1271.84,"price":1271.84,"volume":1365},{"start":1381819501,"end":1381819560,"open":1271.97,"close":1272.07,"high":1272.07,"low":1271.76,"price":1272.07,"volume":3209},{"start":1381819441,"end":1381819500,"open":1272.35,"close":1272.09,"high":1272.35,"low":1271.98,"price":1272.09,"volume":4261},{"start":1381819381,"end":1381819440,"open":1271.74,"close":1272.39,"high":1272.39,"low":1271.72,"price":1272.39,"volume":954},{"start":1381819321,"end":1381819380,"open":1271.46,"close":1271.74,"high":1271.74,"low":1271.25,"price":1271.74,"volume":2101},{"start":1381819261,"end":1381819320,"open":1271.31,"close":1271.47,"high":1271.47,"low":1271.25,"price":1271.47,"volume":1347},{"start":1381819201,"end":1381819260,"open":1271.49,"close":1271.32,"high":1271.67,"low":1271.24,"price":1271.32,"volume":1702},{"start":1381819141,"end":1381819200,"open":1271.29,"close":1271.47,"high":1271.82,"low":1271.29,"price":1271.47,"volume":2024},{"start":1381819081,"end":1381819140,"open":1270.79,"close":1271.2,"high":1271.28,"low":1270.79,"price":1271.2,"volume":2178},{"start":1381819021,"end":1381819080,"open":1270.8,"close":1270.73,"high":1271,"low":1270.73,"price":1270.73,"volume":2016},{"start":1381818961,"end":1381819020,"open":1271.12,"close":1270.7,"high":1271.17,"low":1270.7,"price":1270.7,"volume":1439},{"start":1381818901,"end":1381818960,"open":1271.2,"close":1271.11,"high":1271.27,"low":1270.97,"price":1271.11,"volume":1372},{"start":1381818841,"end":1381818900,"open":1271.57,"close":1271.14,"high":1271.57,"low":1271.09,"price":1271.14,"volume":1143},{"start":1381818781,"end":1381818840,"open":1271.75,"close":1271.47,"high":1271.75,"low":1271.32,"price":1271.47,"volume":1819},{"start":1381818721,"end":1381818780,"open":1271.65,"close":1271.75,"high":1271.75,"low":1271.41,"price":1271.75,"volume":5668},{"start":1381818661,"end":1381818720,"open":1270.95,"close":1271.64,"high":1271.72,"low":1270.9,"price":1271.64,"volume":3255},{"start":1381818601,"end":1381818660,"open":1270.47,"close":1271.02,"high":1271.24,"low":1270.42,"price":1271.02,"volume":4770},{"start":1381818541,"end":1381818600,"open":1270.31,"close":1270.5,"high":1270.5,"low":1270.22,"price":1270.5,"volume":698},{"start":1381818481,"end":1381818540,"open":1270.34,"close":1270.32,"high":1270.47,"low":1270.27,"price":1270.32,"volume":631},{"start":1381818421,"end":1381818480,"open":1269.92,"close":1270.43,"high":1270.45,"low":1269.77,"price":1270.43,"volume":3528},{"start":1381818361,"end":1381818420,"open":1269.85,"close":1269.99,"high":1270.05,"low":1269.75,"price":1269.99,"volume":1661},{"start":1381818301,"end":1381818360,"open":1269.88,"close":1269.85,"high":1269.95,"low":1269.77,"price":1269.85,"volume":2569},{"start":1381818241,"end":1381818300,"open":1269.75,"close":1269.87,"high":1270.03,"low":1269.7,"price":1269.87,"volume":842},{"start":1381818181,"end":1381818240,"open":1270.12,"close":1269.72,"high":1270.19,"low":1269.65,"price":1269.72,"volume":2679},{"start":1381818121,"end":1381818180,"open":1270.12,"close":1270.14,"high":1270.23,"low":1269.95,"price":1270.14,"volume":9746},{"start":1381818061,"end":1381818120,"open":1270.72,"close":1270.22,"high":1270.72,"low":1270.15,"price":1270.22,"volume":6786},{"start":1381818001,"end":1381818060,"open":1270.57,"close":1270.58,"high":1270.75,"low":1270.57,"price":1270.58,"volume":2447},{"start":1381817941,"end":1381818000,"open":1269.95,"close":1270.58,"high":1270.73,"low":1269.9,"price":1270.58,"volume":3325},{"start":1381817881,"end":1381817940,"open":1269.55,"close":1269.85,"high":1269.85,"low":1269.48,"price":1269.85,"volume":3141},{"start":1381817821,"end":1381817880,"open":1269.45,"close":1269.6,"high":1269.69,"low":1269.33,"price":1269.6,"volume":6385},{"start":1381817761,"end":1381817820,"open":1269.15,"close":1269.55,"high":1269.55,"low":1268.97,"price":1269.55,"volume":4471},{"start":1381817701,"end":1381817760,"open":1269.15,"close":1269.1,"high":1269.2,"low":1268.9,"price":1269.1,"volume":3059},{"start":1381817641,"end":1381817700,"open":1268.36,"close":1269.14,"high":1269.14,"low":1268.3,"price":1269.14,"volume":3831},{"start":1381817581,"end":1381817640,"open":1268.53,"close":1268.44,"high":1268.53,"low":1268.12,"price":1268.44,"volume":2814},{"start":1381817521,"end":1381817580,"open":1269.24,"close":1268.59,"high":1269.31,"low":1268.38,"price":1268.59,"volume":3577},{"start":1381817461,"end":1381817520,"open":1269.32,"close":1269.42,"high":1269.67,"low":1269.25,"price":1269.42,"volume":5174},{"start":1381817401,"end":1381817460,"open":1269.7,"close":1269.31,"high":1269.77,"low":1269.31,"price":1269.31,"volume":4115},{"start":1381817341,"end":1381817400,"open":1269.85,"close":1269.75,"high":1269.86,"low":1269.45,"price":1269.75,"volume":4397},{"start":1381817281,"end":1381817340,"open":1270.25,"close":1269.96,"high":1270.4,"low":1269.95,"price":1269.96,"volume":3983},{"start":1381817221,"end":1381817280,"open":1270.31,"close":1270.25,"high":1270.38,"low":1270.04,"price":1270.25,"volume":1434},{"start":1381817161,"end":1381817220,"open":1270.01,"close":1270.32,"high":1270.41,"low":1269.94,"price":1270.32,"volume":9363},{"start":1381817101,"end":1381817160,"open":1270,"close":1270,"high":1270.02,"low":1269.61,"price":1270,"volume":2903}];
+        </script>
+        <script>
+
+            $(document).ready(function(){
+                $('.ui.dropdown').dropdown();
+                var chart = new EvaFinanceChart({
+                    container : "#chart",
+                    width : 500,
+                    height : 300
+                });
+                chart.setData();
+            });
+        </script>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h3>
-<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+    <script>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
-</code></pre>
-
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
-
-<h3>
-<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
-
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
-
-<h3>
-<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
-      </section>
-    </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">EvaFinance maintained by <a href="https://github.com/AlloVince">AlloVince</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
-
-    
-
-  </body>
+        $(document).ready(function(){
+            $('.ui.dropdown').dropdown();
+        });
+    </script>
+</body>
 </html>
