@@ -11,7 +11,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="semantic/css/semantic.css">
-    <link rel="stylesheet" href="css/font-awesome.css">
     <link rel="stylesheet" href="css/finance.css">
 
     <!--[if lte IE 8]>
@@ -30,7 +29,6 @@
     <script src="js/moment.min.js"></script>
     <script src="js/numeral.js"></script>
     <script src="js/evafinance.js"></script>
-    <script src="js/evafinance-ui.js"></script>
 </head>
 <body>
 
@@ -82,23 +80,15 @@
         <script>
 
             $(document).ready(function(){
-                $('.ui.dropdown').dropdown();
-                var chart = new EvaFinanceChart({
-                    container : "#chart",
-                    width : 500,
-                    height : 300
+                var finance = new EvaFinance({
+                    container : "#basic",
+                    width : 620,
+                    height : 250
                 });
-                chart.setData();
+                finance.setData(data);
+                finance.drawChart();
             });
         </script>
     </div>
-
-
-    <script>
-
-        $(document).ready(function(){
-            $('.ui.dropdown').dropdown();
-        });
-    </script>
 </body>
 </html>
