@@ -25,7 +25,7 @@ function p(a){
             timezoneOffset : 0,
             width : 0,
             height : 0,
-            marginLeft : 6,
+            marginLeft : 3,
             marginRight: 50,
             marginTop : 6,
             marginBottom : 12,
@@ -38,7 +38,10 @@ function p(a){
             xAxisTickSize : 0,
             xAxisOrient : 'bottom',
             xAxisLabelSize : 12,
-            xAxisLabelColor : '#999',
+            xAxisLabelColor : '#666',
+            dateFormatHour : 'HH:mm',
+            dateFormatDay : 'MM/DD',
+            dateFormatYear : 'YYYY',
 
             //y axis
             yAxisStroke : '#CCC',
@@ -56,7 +59,7 @@ function p(a){
             yGridFill : 'none',
             yGridTicks : 5,
             yAxisLabelSize : 12,
-            yAxisLabelColor : '#999',
+            yAxisLabelColor : '#333',
 
             //area chart
             areaFillEnable : true,
@@ -80,8 +83,7 @@ function p(a){
             rectDownColor : '#F9653C',
             lineUpColor : '#A0C45E',
             lineDownColor : '#F9653C',
-            dateFormatHour : 'HH:mm',
-            dateFormatDay : 'DD HH:mm',
+
             tooltipStyle  : null,
             tooltipxStyle : null, 
             tooltipyStyle : null, 
@@ -201,15 +203,38 @@ function p(a){
     function drawXaxis() {
         var x = d3.scale.linear()
                 .domain([0, data.length -1])
-                .range([0, status.innerWidth]);
-
-        //time diff cross a day
-        //p(moment(status.timestampMax).format('YYYYMMDD') - moment(status.timestampMin).format('YYYYMMDD'));
+                .range([0, status.innerWidth]),
+            xAxisLabels = [],
+            dayDiff = moment(status.timestampMax).format('YYYYMMDD') - moment(status.timestampMin).format('YYYYMMDD');
 
         var xAxis = d3.svg.axis()
             .scale(x)
             .orient("bottom")
-            .tickFormat(function(d) { return moment(data[d].start).format("HH:mm")})
+            .tickFormat(function(i) { 
+                var nowMoment = moment(data[i].start);
+                xAxisLabels.push(i);
+
+                if(dayDiff == 0) {
+                    return nowMoment.format(options.dateFormatHour);
+                } else {
+
+                    var nowDate = nowMoment.format('YYYYMMDD');
+                    //Display date for first one
+                    if(i < 1) {
+                        return nowMoment.format(options.dateFormatDay);
+                    } else {
+                        var step = xAxisLabels[1] - xAxisLabels[0];
+                        var lastDate = moment(data[i - step].start).format('YYYYMMDD');
+
+                        if(nowDate == lastDate) {
+                            return nowMoment.format(options.dateFormatHour);
+                        } else {
+                            return nowMoment.format(options.dateFormatDay);
+                        }
+                    
+                    }
+                }
+            })
             .tickSize(options.xAxisTickSize)
             .ticks(options.xAxisTicks);
             
@@ -222,6 +247,7 @@ function p(a){
 
         ui.chart.selectAll(".evafinance-xaxis text")
             .attr("font-size", options.xAxisLabelSize + "px")
+            .style("text-anchor", "start")
             .attr("fill", options.xAxisLabelColor);
         
         //xAxis.selectAll("text").attr("font-size", "12px");
