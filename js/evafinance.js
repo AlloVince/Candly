@@ -63,12 +63,14 @@ function p(a){
 
             //area chart
             areaFillEnable : true,
-            areaFillColor : '#FFCCB8',
+            //areaFillColor : '#FFCCB8',
+            areaFillColor : '#E3F4FF',
             areaFillOpacity : 0.8,
             areaLineEnable : true,
-            areaLineColor : '#F9653C',
-            areaLineWidth : 2,
-            areaPointEnable : true,
+            //areaLineColor : '#F9653C',
+            areaLineColor : '#45496E',
+            areaLineWidth : 1,
+            areaPointEnable : false,
             areaPointStroke : '#F9653C',
             areaPointStrokeWidth : 2,
             areaPointFill : '#FFF',
@@ -77,12 +79,14 @@ function p(a){
 
 
             //candle chart
-            xColor : '#CCC',
-            yColor : '#CCC',
-            rectUpColor : '#A0C45E',
-            rectDownColor : '#F9653C',
-            lineUpColor : '#A0C45E',
-            lineDownColor : '#F9653C',
+            candleWidthPercent : 0.5,
+            candleBodyUpColor : '#32EA32',
+            candleBodyDownColor : '#FE3232', 
+            candleBodyStrokeWidth : '1',
+            candleLineUpColor : '#333',
+            candleLineDownColor : '#333',
+            candleLineWidth : 1,
+            candleLineShapeRendering : 'crispEdges',
 
             tooltipStyle  : null,
             tooltipxStyle : null, 
@@ -104,7 +108,7 @@ function p(a){
         , prevClose = null
         , data = null
         , displayRange = []  //be able to display a part of data 
-        , xaxisInterval = []
+        , xInterval = []
         , container = null  //only container is a jQuery object
         //All d3js objects in ui
         , ui = {
@@ -138,7 +142,7 @@ function p(a){
              throw new ReferenceError('Input container not exist');
         }
 
-        namespace = randomString(10) + '_'; 
+        namespace = _.uniqueId() + '_'; 
 
         initUi(ui);
     }
@@ -146,6 +150,7 @@ function p(a){
     /**
      * By James from http://www.xinotes.org/notes/note/515/
      */
+    /*
     function randomString(length) {
         var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz'.split('');
        
@@ -159,6 +164,7 @@ function p(a){
         }
         return str;
     }
+    */
 
     function initUi(inputUi) {
         var width = options.width,
@@ -240,25 +246,32 @@ function p(a){
             
         status.x = x;
 
-        ui.chart.append("g")
-        .attr("class", "evafinance-xaxis")
-        .attr("transform", "translate(0," + status.innerHeight + ")")
-        .call(xAxis);
+        var xAxisBoard = ui.chart.select('g.evafinance-xaxis').empty() ? 
+            ui.chart.append("g").attr("class", "evafinance-xaxis").attr("transform", "translate(0," + status.innerHeight + ")") :
+            ui.chart.select('g.evafinance-xaxis');
+
+        xAxisBoard.call(xAxis);
 
         ui.chart.selectAll(".evafinance-xaxis text")
             .attr("font-size", options.xAxisLabelSize + "px")
             .style("text-anchor", "start")
             .attr("fill", options.xAxisLabelColor);
         
-        //xAxis.selectAll("text").attr("font-size", "12px");
 
         ui.chart.selectAll('.evafinance-xaxis path, .evachart-xaxis line')
             .attr('stroke', options.xAxisStroke)
             .attr('shape-rendering', options.xAxisShapeRendering)
             .attr('fill', options.xAxisFill);
 
-        ui.chart.append("g")
-        .attr("class", "evafinance-xgridlines")
+        var xGridBoard = ui.chart.select('g.evafinance-xgridlines').empty() ? 
+            ui.chart.append("g").attr("class", "evafinance-xgridlines") : 
+            ui.chart.select("g.evafinance-xgridlines");
+
+        xGridBoard
+        .selectAll(".evafinance-xgridline")
+        .remove();
+
+        xGridBoard
         .selectAll(".evafinance-xgridline")
         .data(x.ticks(options.xGridTicks))
         .enter().append("svg:line")
@@ -300,10 +313,11 @@ function p(a){
 
         status.y = y;
 
-        ui.chart.append("g")
-            .attr("class", "evafinance-yaxis")
-            .attr("transform", "translate(" + status.innerWidth + ",0)")
-            .call(yAxis);
+        var yAxisBoard = ui.chart.select('g.evafinance-yaxis').empty() ? 
+            ui.chart.append("g").attr("class", "evafinance-yaxis").attr("transform", "translate(" + status.innerWidth + ",0)") :
+            ui.chart.select('g.evafinance-yaxis');
+
+        yAxisBoard.call(yAxis);
 
         ui.chart.selectAll('.evafinance-yaxis path, .evachart-yaxis line')
             .attr('stroke', options.yAxisStroke)
@@ -314,12 +328,20 @@ function p(a){
             .attr("font-size", options.yAxisLabelSize + "px")
             .attr("fill", options.yAxisLabelColor);
 
-        ui.chart.append("g")
-        .attr("class", "evafinance-ygridlines")
-        .selectAll(".evafinance-xgridline")
+        var yGridBoard = ui.chart.select('g.evafinance-ygridlines').empty() ? 
+            ui.chart.append("g").attr("class", "evafinance-ygridlines") : 
+            ui.chart.select("g.evafinance-ygridlines");
+
+        //Remove grid lines when reduced
+        yGridBoard
+        .selectAll(".evafinance-ygridline")
+        .remove();
+
+        yGridBoard
+        .selectAll(".evafinance-ygridline")
         .data(y.ticks(options.yGridTicks))
         .enter().append("svg:line")
-            .attr("class", "evafinance-xgridline")
+            .attr("class", "evafinance-ygridline")
             .attr("x1", 0)
             .attr("x2", status.innerWidth)
             .attr("y1", y)
@@ -427,16 +449,63 @@ function p(a){
             drawXaxis();
             drawYaxis();
             if(chartType === 'area') {
-                this.drawCandleChart();
-            } else {
                 this.drawAreaChart();
+            } else {
+                this.drawCandleChart();
             }
 
             return this;
         }
 
         , drawCandleChart : function(){
-        
+            function min(a, b){ return a < b ? a : b;}
+            function max(a, b){ return a > b ? a : b;}   
+
+            var stickWidth = options.candleWidthPercent * status.innerWidth / data.length,
+                realInterval = (status.innerWidth - stickWidth) / (data.length - 1),
+                board = ui.chart.selectAll('g.evafinance-boardcandle').empty() ? 
+                        ui.chart.append("g").attr('class', 'evafinance-boardcandle') : 
+                        ui.chart.selectAll('g.evafinance-boardcandle');
+
+            xInterval = [];
+
+            board.selectAll("line.evafinance-chartcandle-line")
+                .data(data)
+                .enter().append("svg:line")
+                .attr("class", "evafinance-chartcandle-line")
+                .attr("shape-rendering", options.candleLineShapeRendering)
+                .attr("x1", function(d, i) { 
+                    return i * realInterval + stickWidth / 2;
+                })
+                .attr("x2", function(d, i) { 
+                    return i * realInterval + stickWidth / 2;
+                })		    
+                .attr("y1", function(d) { return status.y(d.high);})
+                .attr("y2", function(d) { return status.y(d.low); })
+                .attr("stroke", function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
+
+            board.selectAll("rect")
+                .data(data)
+                .enter().append("svg:rect")
+                .attr("class", "evafinance-chartcandle-body")
+                .attr("x", function(d, i) {
+                    var point = realInterval * i;
+                    xInterval.push(point);
+                    return point;
+                })
+                .attr("y", function(d) {return status.y(max(d.open, d.close));})		  
+                .attr("height", function(d) {
+                    var height = status.y(min(d.open, d.close)) - status.y(max(d.open, d.close));
+                    height = height < 1 ? 1 : height;
+                    return height;
+                })
+                .attr("width", function(d) { return stickWidth; })
+                .attr("stroke", function(d){
+                    return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor;
+                })
+                .attr("stroke-width", options.candleBodyStrokeWidth)
+                .attr("shape-rendering", "crispEdges")
+                .attr("fill",function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
         }
 
         , drawAreaChart : function(){
