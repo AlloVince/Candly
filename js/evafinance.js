@@ -8,7 +8,7 @@ function p(a){
 (function () {
 
     /*
-    if(typeof jQuery == "undefined") {
+    if(typeof jQuery == 'undefined') {
         throw new ReferenceError('EvaFinance require jQuery support.');
     }
     */
@@ -88,6 +88,12 @@ function p(a){
             candleLineWidth : 1,
             candleLineShapeRendering : 'crispEdges',
 
+            //prevcloseLine
+            prevcloseLineEnable : true,
+            prevcloseLineColor : '#D95151',
+            prevcloseLineWidth : 1,
+            prevcloseLineShapeRendering : 'crispEdges',
+
             tooltipStyle  : null,
             tooltipxStyle : null, 
             tooltipyStyle : null, 
@@ -113,7 +119,15 @@ function p(a){
         //All d3js objects in ui
         , ui = {
               chart : null
+            , xAxis : null
+            , yAxix : null
+            , xGrid : null
+            , yGrid : null
+            , boardarea : null
+            , boardcandle : null
+            , prevcloseLine : null
             , currentLine : null
+            , crossLine : null
             , tooltip : null
             , tooltipx : null
             , tooltipy : null
@@ -184,25 +198,39 @@ function p(a){
         status.innerHeight = innerHeight;
 
         ui.chart = d3.select(container.get(0))
-            .append("svg:svg")
-            .attr("class", "evafinance-wrapper")
-            .attr("width", width)
-            .attr("height", height)
-            .append("g")
-            .attr("class", "evafinance-inner")
-            .attr("transform", "translate(" + marginLeft + "," + marginTop + ")");
+            .append('svg:svg')
+            .attr('class', 'evafinance-wrapper')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('class', 'evafinance-inner')
+            .attr('transform', 'translate(' + marginLeft + ',' + marginTop + ')');
 
         container.css({
             //background : '#EFEFEF',
-            border : '1px solid',
+            //border : '1px solid',
             position : 'relative',
             width : width + 'px',
             height : height + 'px'
         });
 
-        ui.tooltip = d3.select(container.get(0)).append("div").attr("class", "evafinance-tooltip");
-        ui.tooltipx = d3.select(container.get(0)).append("div").attr("class", "evafinance-tooltipx");
-        ui.tooltipy = d3.select(container.get(0)).append("div").attr("class", "evafinance-tooltipy");
+        ui.xAxis = ui.chart.append('g').attr('class', 'evafinance-xaxis')
+            .attr('transform', 'translate(0,' + innerHeight + ')') ;
+
+        ui.xGrid = ui.chart.append('g').attr('class', 'evafinance-xgridlines');
+
+        ui.yAxis = ui.chart.append('g').attr('class', 'evafinance-yaxis')
+            .attr('transform', 'translate(' + innerWidth + ',0)');
+
+        ui.yGrid = ui.chart.append('g').attr('class', 'evafinance-ygridlines');
+
+        ui.boardcandle = ui.chart.append('g').attr('class', 'evafinance-boardcandle');
+        
+        ui.boardarea = ui.chart.append('g').attr('class', 'evafinance-boardarea');
+
+        ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltip');
+        ui.tooltipx = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipx');
+        ui.tooltipy = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipy');
 
     }
 
@@ -215,7 +243,7 @@ function p(a){
 
         var xAxis = d3.svg.axis()
             .scale(x)
-            .orient("bottom")
+            .orient('bottom')
             .tickFormat(function(i) { 
                 var nowMoment = moment(data[i].start);
                 xAxisLabels.push(i);
@@ -246,44 +274,32 @@ function p(a){
             
         status.x = x;
 
-        var xAxisBoard = ui.chart.select('g.evafinance-xaxis').empty() ? 
-            ui.chart.append("g").attr("class", "evafinance-xaxis").attr("transform", "translate(0," + status.innerHeight + ")") :
-            ui.chart.select('g.evafinance-xaxis');
+        ui.xAxis.call(xAxis);
 
-        xAxisBoard.call(xAxis);
-
-        ui.chart.selectAll(".evafinance-xaxis text")
-            .attr("font-size", options.xAxisLabelSize + "px")
-            .style("text-anchor", "start")
-            .attr("fill", options.xAxisLabelColor);
+        ui.xAxis.selectAll('.evafinance-xaxis text')
+            .attr('font-size', options.xAxisLabelSize + 'px')
+            .style('text-anchor', 'start')
+            .attr('fill', options.xAxisLabelColor);
         
 
-        ui.chart.selectAll('.evafinance-xaxis path, .evachart-xaxis line')
+        ui.xAxis.selectAll('.evafinance-xaxis path, .evachart-xaxis line')
             .attr('stroke', options.xAxisStroke)
             .attr('shape-rendering', options.xAxisShapeRendering)
             .attr('fill', options.xAxisFill);
 
-        var xGridBoard = ui.chart.select('g.evafinance-xgridlines').empty() ? 
-            ui.chart.append("g").attr("class", "evafinance-xgridlines") : 
-            ui.chart.select("g.evafinance-xgridlines");
-
-        xGridBoard
-        .selectAll(".evafinance-xgridline")
-        .remove();
-
-        xGridBoard
-        .selectAll(".evafinance-xgridline")
-        .data(x.ticks(options.xGridTicks))
-        .enter().append("svg:line")
-            .attr("class", "evafinance-xgridline")
-            .attr("x1", x)
-            .attr("x2", x)
-            .attr("y1", 0)
-            .attr("y2", status.innerHeight)
-            .attr("shape-rendering", options.xGridShapeRendering)
-            .attr("fill", options.xGridFill)
-            //.attr("stroke-dasharray", "5,5")
-            .attr("stroke", options.xGridStroke);
+        ui.xGrid.selectAll('.evafinance-xgridline').remove();
+        ui.xGrid.selectAll('.evafinance-xgridline')
+            .data(x.ticks(options.xGridTicks))
+            .enter().append('svg:line')
+            .attr('class', 'evafinance-xgridline')
+            .attr('x1', x)
+            .attr('x2', x)
+            .attr('y1', 0)
+            .attr('y2', status.innerHeight)
+            .attr('shape-rendering', options.xGridShapeRendering)
+            .attr('fill', options.xGridFill)
+            //.attr('stroke-dasharray', '5,5')
+            .attr('stroke', options.xGridStroke);
 
     
     }
@@ -313,42 +329,30 @@ function p(a){
 
         status.y = y;
 
-        var yAxisBoard = ui.chart.select('g.evafinance-yaxis').empty() ? 
-            ui.chart.append("g").attr("class", "evafinance-yaxis").attr("transform", "translate(" + status.innerWidth + ",0)") :
-            ui.chart.select('g.evafinance-yaxis');
+        ui.yAxis.call(yAxis);
 
-        yAxisBoard.call(yAxis);
-
-        ui.chart.selectAll('.evafinance-yaxis path, .evachart-yaxis line')
+        ui.yAxis.selectAll('.evafinance-yaxis path, .evachart-yaxis line')
             .attr('stroke', options.yAxisStroke)
             .attr('shape-rendering', options.yAxisShapeRendering)
             .attr('fill', options.yAxisFill);
 
-        ui.chart.selectAll(".evafinance-yaxis text")
-            .attr("font-size", options.yAxisLabelSize + "px")
-            .attr("fill", options.yAxisLabelColor);
-
-        var yGridBoard = ui.chart.select('g.evafinance-ygridlines').empty() ? 
-            ui.chart.append("g").attr("class", "evafinance-ygridlines") : 
-            ui.chart.select("g.evafinance-ygridlines");
+        ui.yAxis.selectAll('.evafinance-yaxis text')
+            .attr('font-size', options.yAxisLabelSize + 'px')
+            .attr('fill', options.yAxisLabelColor);
 
         //Remove grid lines when reduced
-        yGridBoard
-        .selectAll(".evafinance-ygridline")
-        .remove();
-
-        yGridBoard
-        .selectAll(".evafinance-ygridline")
-        .data(y.ticks(options.yGridTicks))
-        .enter().append("svg:line")
-            .attr("class", "evafinance-ygridline")
-            .attr("x1", 0)
-            .attr("x2", status.innerWidth)
-            .attr("y1", y)
-            .attr("y2", y)
-            .attr("shape-rendering", options.yGridShapeRendering)
-            //.attr("stroke-dasharray", "5,5")
-            .attr("stroke", options.yGridStroke);
+        ui.yGrid.selectAll('.evafinance-ygridline').remove();
+        ui.yGrid.selectAll('.evafinance-ygridline')
+            .data(y.ticks(options.yGridTicks))
+            .enter().append('svg:line')
+            .attr('class', 'evafinance-ygridline')
+            .attr('x1', 0)
+            .attr('x2', status.innerWidth)
+            .attr('y1', y)
+            .attr('y2', y)
+            .attr('shape-rendering', options.yGridShapeRendering)
+            //.attr('stroke-dasharray', '5,5')
+            .attr('stroke', options.yGridStroke);
     
         trigger('evafinance.drawxaxis.after');
     }
@@ -462,50 +466,50 @@ function p(a){
             function max(a, b){ return a > b ? a : b;}   
 
             var stickWidth = options.candleWidthPercent * status.innerWidth / data.length,
-                realInterval = (status.innerWidth - stickWidth) / (data.length - 1),
-                board = ui.chart.selectAll('g.evafinance-boardcandle').empty() ? 
-                        ui.chart.append("g").attr('class', 'evafinance-boardcandle') : 
-                        ui.chart.selectAll('g.evafinance-boardcandle');
+                realInterval = (status.innerWidth - stickWidth) / (data.length - 1);
 
             xInterval = [];
 
-            board.selectAll("line.evafinance-chartcandle-line")
+            ui.boardcandle.selectAll('line.evafinance-chartcandle-line').remove();
+            ui.boardcandle.selectAll('rect.evafinance-chartcandle-body').remove();
+
+            ui.boardcandle.selectAll('line.evafinance-chartcandle-line')
                 .data(data)
-                .enter().append("svg:line")
-                .attr("class", "evafinance-chartcandle-line")
-                .attr("shape-rendering", options.candleLineShapeRendering)
-                .attr("x1", function(d, i) { 
+                .enter().append('svg:line')
+                .attr('class', 'evafinance-chartcandle-line')
+                .attr('shape-rendering', options.candleLineShapeRendering)
+                .attr('x1', function(d, i) { 
                     return i * realInterval + stickWidth / 2;
                 })
-                .attr("x2", function(d, i) { 
+                .attr('x2', function(d, i) { 
                     return i * realInterval + stickWidth / 2;
                 })		    
-                .attr("y1", function(d) { return status.y(d.high);})
-                .attr("y2", function(d) { return status.y(d.low); })
-                .attr("stroke", function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
+                .attr('y1', function(d) { return status.y(d.high);})
+                .attr('y2', function(d) { return status.y(d.low); })
+                .attr('stroke', function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
 
-            board.selectAll("rect")
+            ui.boardcandle.selectAll('rect.evafinance-chartcandle-body')
                 .data(data)
-                .enter().append("svg:rect")
-                .attr("class", "evafinance-chartcandle-body")
-                .attr("x", function(d, i) {
+                .enter().append('svg:rect')
+                .attr('class', 'evafinance-chartcandle-body')
+                .attr('x', function(d, i) {
                     var point = realInterval * i;
                     xInterval.push(point);
                     return point;
                 })
-                .attr("y", function(d) {return status.y(max(d.open, d.close));})		  
-                .attr("height", function(d) {
+                .attr('y', function(d) {return status.y(max(d.open, d.close));})		  
+                .attr('height', function(d) {
                     var height = status.y(min(d.open, d.close)) - status.y(max(d.open, d.close));
                     height = height < 1 ? 1 : height;
                     return height;
                 })
-                .attr("width", function(d) { return stickWidth; })
-                .attr("stroke", function(d){
+                .attr('width', function(d) { return stickWidth; })
+                .attr('stroke', function(d){
                     return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor;
                 })
-                .attr("stroke-width", options.candleBodyStrokeWidth)
-                .attr("shape-rendering", "crispEdges")
-                .attr("fill",function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
+                .attr('stroke-width', options.candleBodyStrokeWidth)
+                .attr('shape-rendering', 'crispEdges')
+                .attr('fill',function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
         }
 
         , drawAreaChart : function(){
@@ -516,45 +520,51 @@ function p(a){
             , line = d3.svg.line()
                 .x(function(d, i) { return status.x(i); })
                 .y(function(d) { return status.y(d.price); })
-            , board = ui.chart.selectAll('g.evafinance-boardarea').empty() ? 
-                ui.chart.append("g").attr('class', 'evafinance-boardarea') : 
-                ui.chart.selectAll('g.evafinance-boardarea');
+            , pathFill = ui.boardarea.select('path.evafinance-chartarea-fill').empty() ?
+                         ui.boardarea.append('path').attr('class', 'evafinance-chartarea-fill') : 
+                         ui.boardarea.select('path.evafinance-chartarea-fill')
+            , pathLine = ui.boardarea.select('path.evafinance-chartarea-line').empty() ?
+                         ui.boardarea.append('path').attr('class', 'evafinance-chartarea-line') : 
+                         ui.boardarea.select('path.evafinance-chartarea-line')
+            ;
+
 
             //init xInterval whatever
             xInterval = [];
 
-            board.append("path")
-            .datum(data)
-            .attr("class", "evafinance-chartarea-fill")
-            .attr("d", area)
-            .attr("fill", options.areaFillColor)
-            .attr("opacity", options.areaFillOpacity);
+            if(options.areaFillEnable) {
+                pathFill
+                    .datum(data)
+                    .attr('d', area)
+                    .attr('fill', options.areaFillColor)
+                    .attr('opacity', options.areaFillOpacity);
+            }
 
-            board.append("path")
-            .datum(data)
-            .attr("class", "evafinance-chartarea-line")
-            .attr("d", line)
-            .attr("fill", 'none')
-            .attr("stroke", options.areaLineColor)
-            .attr("stroke-width", options.areaLineWidth + "px");
+            pathLine
+                .datum(data)
+                .attr('d', line)
+                .attr('fill', 'none')
+                .attr('stroke', options.areaLineColor)
+                .attr('stroke-width', options.areaLineWidth + 'px');
 
-            board.selectAll("circle").data(data).enter()
-            .append("circle")
-            .attr("stroke", options.areaPointStroke)
-            .attr("stroke-width", options.areaPointStrokeWidth)
-            .attr("fill", options.areaPointFill)
-            .attr("class", "evafinance-chartarea-circle")
-            .attr("cx", function(d, i) { 
-                var point = status.x(i);
-                xInterval.push(point);
-                return point; 
-            })
-            .attr("cy", function(d, i) { return status.y(d.price) })
-            .attr("r", options.areaPointSize);
 
-            options.areaPointEnable ? '' : board.selectAll("circle").attr("visibility", "hidden");
-            
-
+            if(options.areaPointEnable) {
+                circle = ui.boardarea.selectAll('circle.evafinance-chartarea-circle').remove(); 
+                ui.boardarea.selectAll('circle.evafinance-chartarea-circle')
+                    .data(data).enter()
+                    .append('circle')
+                    .attr('class', 'evafinance-chartarea-circle')
+                    .attr('stroke', options.areaPointStroke)
+                    .attr('stroke-width', options.areaPointStrokeWidth)
+                    .attr('fill', options.areaPointFill)
+                    .attr('cx', function(d, i) { 
+                        var point = status.x(i);
+                        xInterval.push(point);
+                        return point; 
+                    })
+                    .attr('cy', function(d, i) { return status.y(d.price) })
+                    .attr('r', options.areaPointSize);
+            }
             return this;
         }
 
