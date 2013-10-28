@@ -75,6 +75,7 @@ function p(a){
             areaPointFill : '#FFF',
             areaPointSize : 3,
             areaPointWeight : 2,
+            areaTransitionSpeed : 800,
 
 
             //candle chart
@@ -86,6 +87,7 @@ function p(a){
             candleLineDownColor : '#333',
             candleLineWidth : 1,
             candleLineShapeRendering : 'crispEdges',
+            candleTransitionSpeed : 800,
 
             //prevcloseLine
             prevcloseLineEnable : true,
@@ -100,8 +102,6 @@ function p(a){
         }
         , defaultStatus = {
             namespace : null,
-            chartType : 'candle',
-            prevClose : 0,
             x : null,
             y : null,
             xInterval : [],
@@ -164,6 +164,7 @@ function p(a){
         this._chartType = 'candle';
         this._prevClose = null;
         this._data = {};
+        this._status.namespace = _.uniqueId() + '_';
 
         initUi(this);
     }
@@ -641,6 +642,90 @@ function p(a){
                     .attr('cy', function(d, i) { return status.y(d.price) })
                     .attr('r', options.areaPointSize);
             }
+            return this;
+        }
+
+        , updateChart : function() {
+            drawXaxis(this);
+            drawYaxis(this);
+
+            this.drawPrevcloseLine();
+            if(this._chartType === 'area') {
+                this.updateAreaChart();
+            } else {
+                this.updateCandleChart();
+            }
+            return this;
+        }
+
+        , updateAreaChart : function() {
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                data = this._data;
+
+            var area = d3.svg.area()
+                .x(function(d, i) { return status.x(i); })
+                .y0(status.innerHeight)
+                .y1(function(d) { return status.y(d.price); })
+            , line = d3.svg.line()
+                .x(function(d, i) { return status.x(i); })
+                .y(function(d) { return status.y(d.price); })
+            , speed = options.areaTransitionSpeed 
+            ;
+
+            ui.boardarea.selectAll('circle.evafinance-chartarea-circle').data(data)
+                .transition()
+                .duration(speed)
+                .attr("cx", function(d, i) { return status.x(i); })
+                .attr("cy", function(d, i) { return status.y(d.price); });
+
+            ui.boardarea.select('path.evafinance-chartarea-line').datum(data).transition()
+                .duration(speed)
+                .attr("d", line);
+
+            ui.boardarea.select('path.evafinance-chartarea-fill').datum(data).transition()
+                .duration(speed)
+                .attr("d", area);
+        
+            return this;
+        }
+
+        , updateCandleChart : function() {
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                data = this._data,
+                min = function(a, b) {
+                    return a < b ? a : b;
+                },
+                max = function(a, b) {
+                    return a > b ? a : b;
+                },
+                speed = options.candleTransitionSpeed;
+
+            ui.boardcandle.selectAll("rect.evafinance-chartcandle-body")
+                .data(data)
+                .transition()
+                .duration(speed)
+                .attr("y", function(d) {return status.y(max(d.open, d.close));})		  
+                .attr("height", function(d) { 
+                    var candleBodyHeight = status.y(min(d.open, d.close)) - status.y(max(d.open, d.close));
+                    return candleBodyHeight > 0 ? candleBodyHeight : 2;
+                })
+                .attr('stroke', function(d){
+                    return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor;
+                })
+                .attr('fill',function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
+
+            ui.boardcandle.selectAll("line.evafinance-chartcandle-line")
+                .data(data)
+                .transition()
+                .duration(speed)
+                .attr("y1", function(d) { return status.y(d.high);})
+                .attr("y2", function(d) { return status.y(d.low); })
+                .attr('stroke', function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
+
             return this;
         }
 

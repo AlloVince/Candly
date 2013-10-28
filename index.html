@@ -149,8 +149,11 @@
             finance.setChartType('area');
             finance.setPrevClose(1270);
             finance.setData($.parseJSON($("#basic-data").val()));
+            finance.drawChart();
+            finance.setData($.parseJSON($("#eur-data").val()));
+            finance.setPrevClose(0);
+            finance.updateChart();
 
-            p(finance.getOptions());
             finance2 = new EvaFinance({
                 container : "#eur",
                 width : 620,
@@ -164,9 +167,6 @@
             finance2.setData($.parseJSON($("#eur-data").val()));
             finance2.drawChart();
 
-            finance.drawChart();
-            p(finance2.getOptions());
-            p(finance.getOptions());
             
             finance3 = new EvaFinance({
                 container : "#gbp",
@@ -178,7 +178,7 @@
             finance3.setData($.parseJSON($("#gbp-data").val()));
             finance3.drawChart();
             finance3.setData($.parseJSON($("#eur-data").val()));
-            finance3.drawChart();
+            finance3.updateChart();
             //finance.setData([{"start":1382572801,"end":1382659200,"open":1749.4,"close":1755.1,"high":1757.6,"low":1740.38,"price":1755.1,"volume":18778},{"start":1382486401,"end":1382572800,"open":1754.6,"close":1742.88,"high":1754.9,"low":1734.88,"price":1742.88,"volume":21128},{"start":1382400001,"end":1382486400,"open":1738.13,"close":1749.13,"high":1760.4,"low":1736.38,"price":1749.13,"volume":21258},{"start":1382313601,"end":1382400000,"open":1738.13,"close":1739.38,"high":1745.4,"low":1737.63,"price":1739.38,"volume":39}]);
             //finance.drawChart();
         });
