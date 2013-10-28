@@ -17,10 +17,9 @@ function p(a){
         Constants
     ************************************/
 
-    var evafinance
+    var evafinance = {}
         , VERSION = '1.0.0'
-        , namespace = null
-        , options = {
+        , defaultOptions = {
             container : null,
             timezoneOffset : 0,
             width : 0,
@@ -99,9 +98,13 @@ function p(a){
             tooltipyStyle : null, 
             watermarkUrl : ''
         }
-        , status = {
+        , defaultStatus = {
+            namespace : null,
+            chartType : 'candle',
+            prevClose : 0,
             x : null,
             y : null,
+            xInterval : [],
             interval : 0,
             innerWidth : 0,
             innerHeight : 0,
@@ -110,14 +113,12 @@ function p(a){
             timestampMin : 0,
             timestampMax : 0        
         }
-        , chartType = 'candle'
-        , prevClose = null
-        , data = null
-        , displayRange = []  //be able to display a part of data 
-        , xInterval = []
-        , container = null  //only container is a jQuery object
+        //, defaultChartType = 'candle'
+        //, defaultPrevClose = null
+        //, displayRange = []  //be able to display a part of data 
+        //, container = null  //only container is a jQuery object
         //All d3js objects in ui
-        , ui = {
+        , defaultUi = {
               chart : null
             , xAxis : null
             , yAxix : null
@@ -141,24 +142,30 @@ function p(a){
 
 
     function EvaFinance (inputOptions, inputUi) {
-        options = $.extend(options, inputOptions);
-        if(options.width <= 0) {
-            options.width = container.width() || 600;
-        }
-
-        if(options.height <= 0) {
-            options.height = container.height() || 300;
-        }
-
-        container = $(options.container);
-
-        if(!container.get(0)) {
+        var options = $.extend(defaultOptions, inputOptions);
+        this._container = $(options.container);
+        
+        if(!this._container.get(0)) {
              throw new ReferenceError('Input container not exist');
         }
 
-        namespace = _.uniqueId() + '_'; 
+        if(options.width <= 0) {
+            options.width = this._container.width() || 620;
+        }
 
-        initUi(ui);
+        if(options.height <= 0) {
+            options.height = this._container.height() || 250;
+        }
+
+
+        this._options = $.extend({}, options);
+        this._status = $.extend({}, defaultStatus);
+        this._ui = $.extend({}, defaultUi);
+        this._chartType = 'candle';
+        this._prevClose = null;
+        this._data = {};
+
+        initUi(this);
     }
 
     /**
@@ -180,8 +187,12 @@ function p(a){
     }
     */
 
-    function initUi(inputUi) {
-        var width = options.width,
+    function initUi(root) {
+        var options = root._options,
+            container = root._container,
+            status = root._status,
+            ui = root._ui,
+            width = options.width,
             height = options.height,
             marginLeft = options.marginLeft,
             marginRight = options.marginRight,
@@ -228,13 +239,23 @@ function p(a){
         
         ui.boardarea = ui.chart.append('g').attr('class', 'evafinance-boardarea');
 
+        ui.prevcloseLine = ui.chart.append('g').attr('class', 'evafinance-prevcloseLine');
+
         ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltip');
         ui.tooltipx = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipx');
         ui.tooltipy = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipy');
 
+        root._ui = ui;
+
     }
 
-    function drawXaxis() {
+    function drawXaxis(root) {
+        var options = root._options,
+            container = root._container,
+            status = root._status,
+            ui = root._ui,
+            data = root._data;
+        
         var x = d3.scale.linear()
                 .domain([0, data.length -1])
                 .range([0, status.innerWidth]),
@@ -304,8 +325,16 @@ function p(a){
     
     }
 
-    function drawYaxis() {
-        trigger('evafinance.drawxaxis.before');
+    function drawYaxis(root) {
+        var options = root._options,
+            container = root._container,
+            status = root._status,
+            ui = root._ui,
+            prevClose = root._prevClose,
+            data = root._data;
+
+
+        //trigger('evafinance.drawxaxis.before');
 
         var domainDiff = (status.priceMax - status.priceMin) / 20;
 
@@ -354,11 +383,11 @@ function p(a){
             //.attr('stroke-dasharray', '5,5')
             .attr('stroke', options.yGridStroke);
     
-        trigger('evafinance.drawxaxis.after');
+        //trigger('evafinance.drawxaxis.after');
     }
 
     function trigger(eventName) {
-        $(document).trigger(namespace + eventName, this);
+        //$(document).trigger(namespace + eventName, this);
     }
 
     /************************************
@@ -380,6 +409,8 @@ function p(a){
                 throw new TypeError('Chart data require array type');
             }
 
+            var options = this._options,
+                status = this._status;
             var chartData = input.slice(0);
             //sort data by start ASC
             chartData.sort(function(a, b) {
@@ -416,43 +447,74 @@ function p(a){
             //Longest num after .
             maxNumLength = maxNumLength - Math.floor(priceMin).toString().length - 1;
 
-            data = chartData;
             status.priceMin = priceMin;
             status.priceMax = priceMax;
             status.timestampMin = chartData[0].start;
             status.timestampMax = chartData[chartData.length - 1].start;
             status.maxNumLength = maxNumLength;
             status.interval = interval;
+            this._data = chartData;
 
             return this;
         }
 
         , getData : function(){
-            return data;
+            return this._data;
         }
 
         , setPrevClose : function(num){
-            prevClose = num;
+            this._prevClose = num;
             return this;
         }
 
         , getPrevClose : function(){
-            return prevClose;
+            return this._prevClose;
         }
 
         , getStatus : function(){
-            return status;
+            return this._status;
         }
 
         , setChartType : function(input) {
-            chartType = input || 'area';
+            this._chartType = input || 'area';
+            return this;
+        }
+
+        , drawPrevcloseLine : function(){
+            var options = this._options,
+                status = this._status,
+                ui = this._ui;
+
+            var prevClosePrice = this.getPrevClose();
+            if(!prevClosePrice || prevClosePrice <= 0) {
+                return false;
+            }
+            var y = status.y(prevClosePrice);
+
+            ui.prevcloseLine.select("line.evafinance-prevcloseLine").remove();
+            ui.prevcloseLine
+                .append("svg:line")
+                .attr("class", "evafinance-prevcloseLine")
+                .attr("x1", 0)
+                .attr("x2", status.innerWidth)
+                .attr("y1", y)
+                .attr("y2", y)
+                .attr("shape-rendering", options.prevcloseLineShapeRendering)
+                .attr("stroke", options.prevcloseLineColor)
+                .attr("stroke-width", options.prevcloseLineWidth);
+
             return this;
         }
 
         , drawChart : function(){
-            drawXaxis();
-            drawYaxis();
-            if(chartType === 'area') {
+            drawXaxis(this);
+            drawYaxis(this);
+
+            if(this._options.prevcloseLineEnable) {
+                this.drawPrevcloseLine();
+            }
+
+            if(this._chartType === 'area') {
                 this.drawAreaChart();
             } else {
                 this.drawCandleChart();
@@ -462,10 +524,18 @@ function p(a){
         }
 
         , drawCandleChart : function(){
-            function min(a, b){ return a < b ? a : b;}
-            function max(a, b){ return a > b ? a : b;}   
-
-            var stickWidth = options.candleWidthPercent * status.innerWidth / data.length,
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                data = this._data,
+                xInterval = status.xInterval,
+                min = function(a, b) {
+                    return a < b ? a : b;
+                },
+                max = function(a, b) {
+                    return a > b ? a : b;
+                },
+                stickWidth = options.candleWidthPercent * status.innerWidth / data.length,
                 realInterval = (status.innerWidth - stickWidth) / (data.length - 1);
 
             xInterval = [];
@@ -513,6 +583,12 @@ function p(a){
         }
 
         , drawAreaChart : function(){
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                data = this._data,
+                xInterval = status.xInterval;
+
             var area = d3.svg.area()
                 .x(function(d, i) { return status.x(i); })
                 .y0(status.innerHeight)
@@ -568,14 +644,18 @@ function p(a){
             return this;
         }
 
+        , getOptions : function() {
+            return this._options;
+        }
+
         , bind : function(eventName, func){
-            $(document).on(namespace + eventName, func);
+            $(document).on(this._namespace + eventName, func);
 
             return this;
         }
 
         , unbind : function(eventName) {
-            $(document).off(namespace + eventName);
+            $(document).off(this._namespace + eventName);
 
             return this;
         }
