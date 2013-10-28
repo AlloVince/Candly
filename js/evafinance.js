@@ -95,11 +95,25 @@ function p(a){
             prevcloseLineWidth : 1,
             prevcloseLineShapeRendering : 'crispEdges',
 
+            //current line
+            currentLineEnable : true,
+            currentLineColor : '#333',
+            currentLineWidth : 1,
+            currentLineShapeRendering : 'crispEdges',
+
             tooltipStyle  : null,
             tooltipxStyle : null, 
             tooltipyStyle : null, 
-            watermarkUrl : ''
+            
+            //watermark
+            watermarkUrl : '',
+            watermarkWidth : 0,
+            watermarkHeight : 0,
+            watermarkOpacity : 0.2,
+            watermarkMargin : [0, 0, 0, 0],
+            watermarkPosition : 'bl' //bottom left
         }
+
         , defaultStatus = {
             namespace : null,
             x : null,
@@ -120,6 +134,7 @@ function p(a){
         //All d3js objects in ui
         , defaultUi = {
               chart : null
+            , watermark : null
             , xAxis : null
             , yAxix : null
             , xGrid : null
@@ -225,6 +240,8 @@ function p(a){
             width : width + 'px',
             height : height + 'px'
         });
+
+        ui.watermark = ui.chart.append('g').attr('class', 'evafinance-watermark-layer');
 
         ui.xAxis = ui.chart.append('g').attr('class', 'evafinance-xaxis')
             .attr('transform', 'translate(0,' + innerHeight + ')') ;
@@ -478,6 +495,71 @@ function p(a){
 
         , setChartType : function(input) {
             this._chartType = input || 'area';
+            return this;
+        }
+
+        , setOption : function(key, value) {
+            this._options[key] ? this._options[key] = value : '';
+            return this;
+        }
+
+        , drawWaterMark : function(watermarkOptions) {
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                x = 0,
+                y = 0,
+                top = 0,
+                right = 1,
+                bottom = 2,
+                left = 3,
+                innerWidth = status.innerWidth,
+                innerHeight = status.innerHeight;
+
+            options = $.extend(options, watermarkOptions);
+            var margin = options.watermarkMargin,
+                width = options.watermarkWidth,
+                height = options.watermarkHeight;
+
+            switch(options.watermarkPosition.toUpperCase()) {
+                case 'TL' : 
+                    x = margin[left];
+                    y = margin[top];
+                break;
+                case 'TR' : 
+                    x = innerWidth - width - margin[right];
+                    y = margin[top];
+                break;
+                case 'CENTER' : 
+                    x = (innerWidth - width) / 2;
+                    y = (innerHeight - height) / 2;
+                break;
+                case 'BR' : 
+                    x = innerWidth - width - margin[right];
+                    y = innerHeight - height - margin[bottom]; 
+                break;
+                case 'BL' :
+                default : 
+                    x = margin[left];
+                    y = innerHeight - height - margin[bottom]; 
+            }
+
+            var watermark = 
+                ui.watermark.select('image.evafinance-watermark').empty() ?
+                    ui.watermark.append("svg:image")
+                        .attr('class', 'evafinance-watermark')
+                        :
+                    ui.watermark.select('image.evafinance-watermark');
+
+
+            watermark
+                .attr("x", x)
+                .attr("y", y)
+                .attr("width", options.watermarkWidth)
+                .attr("height", options.watermarkHeight)
+                .attr("opacity", options.watermarkOpacity)
+                .attr("xlink:href", options.watermarkUrl);
+
             return this;
         }
 

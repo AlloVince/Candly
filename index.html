@@ -153,6 +153,12 @@
             finance.setData($.parseJSON($("#eur-data").val()));
             finance.setPrevClose(0);
             finance.updateChart();
+            finance.drawWaterMark({
+                watermarkUrl : '/EvaFinance/css/watermark.png',
+                watermarkWidth : 300,
+                watermarkHeight : 90,
+                watermarkMargin : [0, 0, 20, 20]
+            });
 
             finance2 = new EvaFinance({
                 container : "#eur",
