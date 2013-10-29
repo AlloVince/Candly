@@ -100,6 +100,12 @@ function p(a){
             currentLineColor : '#333',
             currentLineWidth : 1,
             currentLineShapeRendering : 'crispEdges',
+            currentLineRectHeight : 16,
+            currentLineRectFill : '#000',
+            currentLineRectOpacity : 0.7,
+            currentLineTextFontSize : 12,
+            currentLineTextColor : '#FFF',
+            currentLineTextMargin : 3,
 
             tooltipStyle  : null,
             tooltipxStyle : null, 
@@ -115,6 +121,7 @@ function p(a){
         }
 
         , defaultStatus = {
+            rendered : false, //chart already rendered, for IE8
             namespace : null,
             x : null,
             y : null,
@@ -178,6 +185,7 @@ function p(a){
         this._ui = $.extend({}, defaultUi);
         this._chartType = 'candle';
         this._prevClose = null;
+        this._current = null;
         this._data = {};
         this._status.namespace = _.uniqueId() + '_';
 
@@ -257,7 +265,11 @@ function p(a){
         
         ui.boardarea = ui.chart.append('g').attr('class', 'evafinance-boardarea');
 
-        ui.prevcloseLine = ui.chart.append('g').attr('class', 'evafinance-prevcloseLine');
+        ui.prevcloseLine = ui.chart.append('g').attr('class', 'evafinance-prevclose-layer');
+
+        ui.currentLine = ui.chart.append('g').attr('class', 'evafinance-current-layer');
+
+        ui.crossLine = ui.chart.append('g').attr('class', 'evafinance-cross-layer');
 
         ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltip');
         ui.tooltipx = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipx');
@@ -546,19 +558,19 @@ function p(a){
 
             var watermark = 
                 ui.watermark.select('image.evafinance-watermark').empty() ?
-                    ui.watermark.append("svg:image")
+                    ui.watermark.append('svg:image')
                         .attr('class', 'evafinance-watermark')
                         :
                     ui.watermark.select('image.evafinance-watermark');
 
 
             watermark
-                .attr("x", x)
-                .attr("y", y)
-                .attr("width", options.watermarkWidth)
-                .attr("height", options.watermarkHeight)
-                .attr("opacity", options.watermarkOpacity)
-                .attr("xlink:href", options.watermarkUrl);
+                .attr('x', x)
+                .attr('y', y)
+                .attr('width', options.watermarkWidth)
+                .attr('height', options.watermarkHeight)
+                .attr('opacity', options.watermarkOpacity)
+                .attr('xlink:href', options.watermarkUrl);
 
             return this;
         }
@@ -574,17 +586,64 @@ function p(a){
             }
             var y = status.y(prevClosePrice);
 
-            ui.prevcloseLine.select("line.evafinance-prevcloseLine").remove();
+            ui.prevcloseLine.select('line.evafinance-prevclose-line').remove();
             ui.prevcloseLine
-                .append("svg:line")
-                .attr("class", "evafinance-prevcloseLine")
-                .attr("x1", 0)
-                .attr("x2", status.innerWidth)
-                .attr("y1", y)
-                .attr("y2", y)
-                .attr("shape-rendering", options.prevcloseLineShapeRendering)
-                .attr("stroke", options.prevcloseLineColor)
-                .attr("stroke-width", options.prevcloseLineWidth);
+                .append('svg:line')
+                .attr('class', 'evafinance-prevclose-line')
+                .attr('x1', 0)
+                .attr('x2', status.innerWidth)
+                .attr('y1', y)
+                .attr('y2', y)
+                .attr('shape-rendering', options.prevcloseLineShapeRendering)
+                .attr('stroke', options.prevcloseLineColor)
+                .attr('stroke-width', options.prevcloseLineWidth);
+
+            return this;
+        }
+
+        , drawCurrentLine : function(){
+            var options = this._options,
+                status = this._status,
+                ui = this._ui;
+
+            var currentPrice = this.getCurrent();
+            if(!currentPrice || currentPrice <= 0) {
+                return false;
+            }
+            var y = status.y(currentPrice);
+
+            var line = ui.currentLine.select('line.evafinance-current-line').empty() ? 
+                    ui.currentLine.append('svg:line').attr('class', 'evafinance-current-line')
+                : ui.currentLine.select('line.evafinance-current-line');
+            
+            line.attr('x1', 0)
+                .attr('x2', status.innerWidth)
+                .attr('y1', y)
+                .attr('y2', y)
+                .attr('shape-rendering', options.currentLineShapeRendering)
+                .attr('stroke', options.currentLineColor)
+                .attr('stroke-width', options.currentLineWidth);
+
+            var rect = ui.currentLine.select('rect.evafinance-current-rect').empty() ? 
+                    ui.currentLine.append('svg:rect').attr('class', 'evafinance-current-rect')
+                    : ui.currentLine.select('rect.evafinance-current-rect');
+
+            rect.attr('x', status.innerWidth)
+                .attr('y', y - options.currentLineRectHeight / 2)		  
+                .attr('height', options.currentLineRectHeight)
+                .attr('width', status.marginRight)
+                .attr('fill', options.currentLineRectFill)
+                .attr('opacity', options.currentLineRectOpacity);
+
+            var text = ui.currentLine.select('text.evafinance-current-text').empty() ?
+                ui.currentLine.append('text').attr('class', 'evafinance-current-text')
+                : ui.currentLine.select('text.evafinance-current-text');
+
+            text.text(currentPrice)
+                .attr('font-size', options.currentLineTextFontSize + 'px')
+                .attr('x', status.innerWidth + options.currentLineTextMargin)
+                .attr('y', y - options.currentLineRectHeight / 2 + options.currentLineTextFontSize)
+                .attr('fill', options.currentLineTextColor);
 
             return this;
         }
@@ -595,6 +654,10 @@ function p(a){
 
             if(this._options.prevcloseLineEnable) {
                 this.drawPrevcloseLine();
+            }
+
+            if(this._options.currentLineEnable) {
+                this.drawCurrentLine();
             }
 
             if(this._chartType === 'area') {
@@ -759,16 +822,16 @@ function p(a){
             ui.boardarea.selectAll('circle.evafinance-chartarea-circle').data(data)
                 .transition()
                 .duration(speed)
-                .attr("cx", function(d, i) { return status.x(i); })
-                .attr("cy", function(d, i) { return status.y(d.price); });
+                .attr('cx', function(d, i) { return status.x(i); })
+                .attr('cy', function(d, i) { return status.y(d.price); });
 
             ui.boardarea.select('path.evafinance-chartarea-line').datum(data).transition()
                 .duration(speed)
-                .attr("d", line);
+                .attr('d', line);
 
             ui.boardarea.select('path.evafinance-chartarea-fill').datum(data).transition()
                 .duration(speed)
-                .attr("d", area);
+                .attr('d', area);
         
             return this;
         }
@@ -786,12 +849,12 @@ function p(a){
                 },
                 speed = options.candleTransitionSpeed;
 
-            ui.boardcandle.selectAll("rect.evafinance-chartcandle-body")
+            ui.boardcandle.selectAll('rect.evafinance-chartcandle-body')
                 .data(data)
                 .transition()
                 .duration(speed)
-                .attr("y", function(d) {return status.y(max(d.open, d.close));})		  
-                .attr("height", function(d) { 
+                .attr('y', function(d) {return status.y(max(d.open, d.close));})		  
+                .attr('height', function(d) { 
                     var candleBodyHeight = status.y(min(d.open, d.close)) - status.y(max(d.open, d.close));
                     return candleBodyHeight > 0 ? candleBodyHeight : 2;
                 })
@@ -800,15 +863,24 @@ function p(a){
                 })
                 .attr('fill',function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
 
-            ui.boardcandle.selectAll("line.evafinance-chartcandle-line")
+            ui.boardcandle.selectAll('line.evafinance-chartcandle-line')
                 .data(data)
                 .transition()
                 .duration(speed)
-                .attr("y1", function(d) { return status.y(d.high);})
-                .attr("y2", function(d) { return status.y(d.low); })
+                .attr('y1', function(d) { return status.y(d.high);})
+                .attr('y2', function(d) { return status.y(d.low); })
                 .attr('stroke', function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
 
             return this;
+        }
+
+        , setCurrent : function(current) {
+            this._current = current;
+            return this;
+        }
+
+        , getCurrent : function() {
+            return this._current;
         }
 
         , getOptions : function() {
