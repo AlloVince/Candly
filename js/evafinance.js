@@ -76,6 +76,7 @@ function p(a){
             areaPointSize : 3,
             areaPointWeight : 2,
             areaTransitionSpeed : 800,
+            areaTransitionEase : 'cubic-in-out',
 
 
             //candle chart
@@ -88,6 +89,8 @@ function p(a){
             candleLineWidth : 1,
             candleLineShapeRendering : 'crispEdges',
             candleTransitionSpeed : 800,
+            //candleTransitionEase : 'cubic-in-out',
+            candleTransitionEase : 'bounce',
 
             //prevcloseLine
             prevcloseLineEnable : true,
@@ -106,6 +109,8 @@ function p(a){
             currentLineTextFontSize : 12,
             currentLineTextColor : '#FFF',
             currentLineTextMargin : 3,
+            currentLineTransitionSpeed : 800,
+            currentLineTransitionEase : 'bounce',
 
             tooltipStyle  : null,
             tooltipxStyle : null, 
@@ -361,6 +366,7 @@ function p(a){
             status = root._status,
             ui = root._ui,
             prevClose = root._prevClose,
+            current = root._current,
             data = root._data;
 
 
@@ -373,11 +379,17 @@ function p(a){
             yAxisMin = status.priceMin - domainDiff,
             yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? prevClose + domainDiff : yAxisMax,
             yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? prevClose - domainDiff : yAxisMin;
+
+            yAxisMax = current > 0 && current >= yAxisMax ? current + domainDiff : yAxisMax,
+            yAxisMin = current > 0 && current <= yAxisMin ? current - domainDiff : yAxisMin;
         } else {
             var yAxisMax = Math.ceil(status.priceMax + domainDiff), //add 10% domain offset
             yAxisMin = Math.floor(status.priceMin - domainDiff),
             yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? Math.ceil(prevClose + domainDiff) : yAxisMax,
             yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? Math.floor(prevClose - domainDiff) : yAxisMin;
+            
+            yAxisMax = current > 0 && current >= yAxisMax ? Math.ceil(current + domainDiff) : yAxisMax,
+            yAxisMin = current > 0 && current <= yAxisMin ? Math.floor(current - domainDiff) : yAxisMin;
         }
 
         var y = d3.scale.linear().domain([yAxisMin, yAxisMax]).range([status.innerHeight, 0]),
@@ -817,20 +829,24 @@ function p(a){
                 .x(function(d, i) { return status.x(i); })
                 .y(function(d) { return status.y(d.price); })
             , speed = options.areaTransitionSpeed 
+            , ease = options.areaTransitionEase
             ;
 
             ui.boardarea.selectAll('circle.evafinance-chartarea-circle').data(data)
                 .transition()
+                .ease(ease)
                 .duration(speed)
                 .attr('cx', function(d, i) { return status.x(i); })
                 .attr('cy', function(d, i) { return status.y(d.price); });
 
             ui.boardarea.select('path.evafinance-chartarea-line').datum(data).transition()
                 .duration(speed)
+                .ease(ease)
                 .attr('d', line);
 
             ui.boardarea.select('path.evafinance-chartarea-fill').datum(data).transition()
                 .duration(speed)
+                .ease(ease)
                 .attr('d', area);
         
             return this;
@@ -847,11 +863,13 @@ function p(a){
                 max = function(a, b) {
                     return a > b ? a : b;
                 },
+                ease = options.candleTransitionEase,
                 speed = options.candleTransitionSpeed;
 
             ui.boardcandle.selectAll('rect.evafinance-chartcandle-body')
                 .data(data)
                 .transition()
+                .ease(ease)
                 .duration(speed)
                 .attr('y', function(d) {return status.y(max(d.open, d.close));})		  
                 .attr('height', function(d) { 
@@ -866,6 +884,7 @@ function p(a){
             ui.boardcandle.selectAll('line.evafinance-chartcandle-line')
                 .data(data)
                 .transition()
+                .ease(ease)
                 .duration(speed)
                 .attr('y1', function(d) { return status.y(d.high);})
                 .attr('y2', function(d) { return status.y(d.low); })
@@ -874,8 +893,42 @@ function p(a){
             return this;
         }
 
+        , updateCurrentLine : function() {
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                speed = options.currentLineTransitionSpeed,
+                ease = options.currentLineTransitionEase,
+                currentPrice = this.getCurrent(),
+                y = status.y(currentPrice);
+
+            if(!currentPrice || currentPrice <= 0) {
+                return false;
+            }
+
+            ui.currentLine.select('line.evafinance-current-line')
+                .transition().duration(speed)
+                .ease(ease)
+                .attr('y1', y)
+                .attr('y2', y);
+
+            ui.currentLine.select('rect.evafinance-current-rect')
+                .transition().duration(speed)
+                .ease(ease)
+                .attr('y', y - options.currentLineRectHeight / 2);
+
+            ui.currentLine.select('text.evafinance-current-text')
+                .transition().duration(speed)
+                .ease(ease)
+                .text(currentPrice)
+                .attr('y', y - options.currentLineRectHeight / 2 + options.currentLineTextFontSize);
+
+            return this;
+        }
+
         , setCurrent : function(current) {
             this._current = current;
+            drawYaxis(this);
             return this;
         }
 

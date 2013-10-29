@@ -148,15 +148,15 @@
             });
             finance.setChartType('area');
             finance.setPrevClose(1270);
-            finance.setCurrent(1272);
+            finance.setCurrent(1275);
             finance.setData($.parseJSON($("#basic-data").val()));
             finance.drawChart();
-            finance.setData($.parseJSON($("#eur-data").val()));
 
+            finance.setData($.parseJSON($("#eur-data").val()));
             finance.setPrevClose(0);
-            finance.setCurrent(1271);
-            finance.drawChart();
-            //finance.updateChart();
+            finance.setCurrent(1.365);
+            finance.updateChart();
+            finance.updateCurrentLine();
             //finance.drawChart();
             /*
             finance.drawWaterMark({
@@ -191,7 +191,7 @@
             finance3.setData($.parseJSON($("#gbp-data").val()));
             finance3.drawChart();
             finance3.setData($.parseJSON($("#eur-data").val()));
-            //finance3.updateChart();
+            finance3.updateChart();
             //finance.setData([{"start":1382572801,"end":1382659200,"open":1749.4,"close":1755.1,"high":1757.6,"low":1740.38,"price":1755.1,"volume":18778},{"start":1382486401,"end":1382572800,"open":1754.6,"close":1742.88,"high":1754.9,"low":1734.88,"price":1742.88,"volume":21128},{"start":1382400001,"end":1382486400,"open":1738.13,"close":1749.13,"high":1760.4,"low":1736.38,"price":1749.13,"volume":21258},{"start":1382313601,"end":1382400000,"open":1738.13,"close":1739.38,"high":1745.4,"low":1737.63,"price":1739.38,"volume":39}]);
             //finance.drawChart();
         });
