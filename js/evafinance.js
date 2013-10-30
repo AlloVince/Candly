@@ -1,3 +1,11 @@
+/*!
+ * EvaFinanceChart Efc
+ * A data driven finance chart component based on d3.js
+ * author : AlloVince
+ * project page : https://github.com/AlloVince/EvaFinance
+ * license : MIT
+ */
+
 function p(a){
     if(typeof console === 'undefined') {
         return false;
@@ -6,6 +14,7 @@ function p(a){
 }
 
 (function () {
+    "use strict";
 
     /*
     if(typeof jQuery == 'undefined') {
@@ -112,9 +121,37 @@ function p(a){
             currentLineTransitionSpeed : 800,
             currentLineTransitionEase : 'bounce',
 
-            tooltipStyle  : null,
-            tooltipxStyle : null, 
-            tooltipyStyle : null, 
+            //crossline
+            crossLineEnable : true,
+            crossxLineColor : '#333',
+            crossxLineWidth : 1,
+            crossxLineShapeRendering : 'crispEdges',
+            crossxLineStrokeDasharray : '5,5',
+            crossyLineColor : '#333',
+            crossyLineWidth : 1,
+            crossyLineShapeRendering : 'crispEdges',
+            crossyLineStrokeDasharray : '5,5',
+
+            tooltipStyle  : {
+                'font-size' : '12px',
+                'background' : '#FFF',
+                'border' : '1px solid #E3F4FF'
+            },
+            tooltipxStyle : {
+                'display' : 'inline-block',
+                'position' : 'absolute',
+                'font-size' : '12px',
+                'background' : '#FFF',
+                'border' : '1px solid #E3F4FF'
+            }, 
+            tooltipxFormat : 'L hh:mm',
+            tooltipyStyle : {
+                'display' : 'inline-block',
+                'position' : 'absolute',
+                'font-size' : '12px',
+                'background' : '#FFF',
+                'border' : '1px solid #E3F4FF'
+            }, 
             
             //watermark
             watermarkUrl : '',
@@ -122,7 +159,9 @@ function p(a){
             watermarkHeight : 0,
             watermarkOpacity : 0.2,
             watermarkMargin : [0, 0, 0, 0],
-            watermarkPosition : 'bl' //bottom left
+            watermarkPosition : 'BL', //bottom left
+
+            events : {} //for overwrite default events
         }
 
         , defaultStatus = {
@@ -130,7 +169,8 @@ function p(a){
             namespace : null,
             x : null,
             y : null,
-            xInterval : [],
+            areaInterval : [],
+            candleInterval : [],
             interval : 0,
             innerWidth : 0,
             innerHeight : 0,
@@ -163,14 +203,18 @@ function p(a){
         }
         , hasModule = (typeof module !== 'undefined' && module.exports);
 
+
     /************************************
         Constructors
     ************************************/
 
 
     function EvaFinance (inputOptions, inputUi) {
-        var options = $.extend(defaultOptions, inputOptions);
-        this._container = $(options.container);
+        var options = $.extend(defaultOptions, inputOptions),
+            container = $(options.container),
+            namespace =  'evafinance_' + _.uniqueId() + '_';
+
+        this._container = container;
         
         if(!this._container.get(0)) {
              throw new ReferenceError('Input container not exist');
@@ -192,9 +236,13 @@ function p(a){
         this._prevClose = null;
         this._current = null;
         this._data = {};
-        this._status.namespace = _.uniqueId() + '_';
+        this._status.namespace = namespace;
 
-        initUi(this);
+        initUi(this);    
+        initEvent(this);
+    }
+
+    function ControlEvent(root){
     }
 
     /**
@@ -216,6 +264,71 @@ function p(a){
     }
     */
 
+    function initEvent(root) {
+        var container = root._container,
+            options = root._options,
+            status = root._status,
+            ui = root._ui,
+            width = options.width,
+            height = options.height,
+            marginLeft = options.marginLeft,
+            marginRight = options.marginRight,
+            marginTop = options.marginTop,
+            marginBottom = options.marginBottom,
+            innerWidth = width - marginLeft - marginRight,
+            innerHeight = height - marginTop - marginBottom;
+
+        var events = $.extend(defautEvents, root._options.events);
+        for(var key in events) {
+            root.on(key, events[key]);
+        }
+
+
+        container.on('mousemove', function(event) {
+            var offset = container.offset(),
+                x = event.pageX - offset.left - marginLeft,
+                y = event.pageY - offset.top - marginTop,
+                interval = root._chartType == 'area' ? status.areaInterval : status.candleInterval;
+
+            //check mause whether out of chart range
+            if(x >= 0 && x <= innerWidth || y >= 0 && y <= innerHeight) {
+                var index = 0;
+                interval.map(function(d, i){
+                    if(x > d) {
+                        index = i;
+                        return false;
+                    }
+                });
+                var params = {
+                    x : x,
+                    y : y,
+                    index : index
+                }
+                if(root._chartType == 'area') {
+                    root.trigger('mousemoveonarea', [params]);
+                } else {
+                    root.trigger('mousemoveoncandle', [params]);
+                }
+            }
+        });
+
+
+
+
+        /*
+
+        
+        container.on('mouseenter', function(event) {
+            container.trigger(namespace + '.mouseenter');
+        }); 
+        
+        container.on('mouseleave', function(event) {
+            container.trigger(namespace + '.mouseleave');
+        }); 
+        */
+
+    }
+
     function initUi(root) {
         var options = root._options,
             container = root._container,
@@ -228,7 +341,8 @@ function p(a){
             marginTop = options.marginTop,
             marginBottom = options.marginBottom,
             innerWidth = width - marginLeft - marginRight,
-            innerHeight = height - marginTop - marginBottom;
+            innerHeight = height - marginTop - marginBottom,
+            key;
 
         status.marginLeft = marginLeft;
         status.marginRight = marginRight;
@@ -278,10 +392,15 @@ function p(a){
 
         ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltip');
         ui.tooltipx = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipx');
+        for(key in options.tooltipxStyle) {
+            ui.tooltipx.style(key, options.tooltipxStyle[key]);
+        }
         ui.tooltipy = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipy');
+        for(key in options.tooltipyStyle) {
+            ui.tooltipy.style(key, options.tooltipyStyle[key]);
+        }
 
         root._ui = ui;
-
     }
 
     function drawXaxis(root) {
@@ -428,10 +547,6 @@ function p(a){
         //trigger('evafinance.drawxaxis.after');
     }
 
-    function trigger(eventName) {
-        //$(document).trigger(namespace + eventName, this);
-    }
-
     /************************************
         Top Level Functions
     ************************************/
@@ -441,6 +556,13 @@ function p(a){
 
     // version number
     evafinance.version = VERSION;
+
+    evafinance.controlevent = function(){
+        var events = new ControlEvent(this);
+        return events;
+    }
+
+
 
     /************************************
         EvaFinance Prototype
@@ -660,6 +782,39 @@ function p(a){
             return this;
         }
 
+        , drawCrossLine : function(){
+            var options = this._options,
+                status = this._status,
+                ui = this._ui;
+
+
+            var xline = ui.crossLine.select('line.evafinance-cross-xline').empty() ? 
+                    ui.crossLine.append('svg:line').attr('class', 'evafinance-cross-xline')
+                : ui.crossLine.select('line.evafinance-cross-xline');
+            
+            xline.attr('x1', 0)
+                .attr('x2', status.innerWidth)
+                .attr('y1', 0)
+                .attr('y2', 0)
+                .attr('shape-rendering', options.crossxLineShapeRendering)
+                .attr('stroke-dasharray', options.crossxLineStrokeDasharray)
+                .attr('stroke', options.crossxLineColor)
+                .attr('stroke-width', options.crossxLineWidth);
+
+            var yline = ui.crossLine.select('line.evafinance-cross-yline').empty() ? 
+                    ui.crossLine.append('svg:line').attr('class', 'evafinance-cross-yline')
+                : ui.crossLine.select('line.evafinance-cross-yline');
+            
+            yline.attr('x1', 0)
+                .attr('x2', 0)
+                .attr('y1', 0)
+                .attr('y2', status.innerHeight)
+                .attr('shape-rendering', options.crossyLineShapeRendering)
+                .attr('stroke-dasharray', options.crossyLineStrokeDasharray)
+                .attr('stroke', options.crossyLineColor)
+                .attr('stroke-width', options.crossyLineWidth);
+        }
+
         , drawChart : function(){
             drawXaxis(this);
             drawYaxis(this);
@@ -670,6 +825,10 @@ function p(a){
 
             if(this._options.currentLineEnable) {
                 this.drawCurrentLine();
+            }
+
+            if(this._options.crossLineEnable) {
+                this.drawCrossLine();
             }
 
             if(this._chartType === 'area') {
@@ -686,7 +845,7 @@ function p(a){
                 status = this._status,
                 ui = this._ui,
                 data = this._data,
-                xInterval = status.xInterval,
+                interval = status.candleInterval,
                 min = function(a, b) {
                     return a < b ? a : b;
                 },
@@ -696,7 +855,7 @@ function p(a){
                 stickWidth = options.candleWidthPercent * status.innerWidth / data.length,
                 realInterval = (status.innerWidth - stickWidth) / (data.length - 1);
 
-            xInterval = [];
+            interval = [];
 
             ui.boardcandle.selectAll('line.evafinance-chartcandle-line').remove();
             ui.boardcandle.selectAll('rect.evafinance-chartcandle-body').remove();
@@ -722,7 +881,7 @@ function p(a){
                 .attr('class', 'evafinance-chartcandle-body')
                 .attr('x', function(d, i) {
                     var point = realInterval * i;
-                    xInterval.push(point);
+                    interval.push(point);
                     return point;
                 })
                 .attr('y', function(d) {return status.y(max(d.open, d.close));})		  
@@ -738,6 +897,10 @@ function p(a){
                 .attr('stroke-width', options.candleBodyStrokeWidth)
                 .attr('shape-rendering', 'crispEdges')
                 .attr('fill',function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
+
+            status.candleInterval = interval;
+
+            return this;
         }
 
         , drawAreaChart : function(){
@@ -745,7 +908,8 @@ function p(a){
                 status = this._status,
                 ui = this._ui,
                 data = this._data,
-                xInterval = status.xInterval;
+                interval = status.areaInterval,
+                i = 0;
 
             var area = d3.svg.area()
                 .x(function(d, i) { return status.x(i); })
@@ -764,7 +928,11 @@ function p(a){
 
 
             //init xInterval whatever
-            xInterval = [];
+            interval = [];
+            for(i in data) {
+                interval.push(status.x(i));
+            }
+            status.areaInterval = interval;
 
             if(options.areaFillEnable) {
                 pathFill
@@ -793,7 +961,6 @@ function p(a){
                     .attr('fill', options.areaPointFill)
                     .attr('cx', function(d, i) { 
                         var point = status.x(i);
-                        xInterval.push(point);
                         return point; 
                     })
                     .attr('cy', function(d, i) { return status.y(d.price) })
@@ -940,16 +1107,75 @@ function p(a){
             return this._options;
         }
 
-        , bind : function(eventName, func){
-            $(document).on(this._namespace + eventName, func);
+        , trigger : function(eventName, params) {
+            this._container.trigger(eventName, params);
+            return this;
+        }
 
+        , on : function(eventName, callback) {
+            this._container.on(eventName, $.proxy(callback, this));
+            return this;
+        }
+
+        , off : function(eventName) {
+            this._container.off(eventName);
+            return this;
+        }
+        /*
+
+        , bind : function(eventName, func){
+            this._container.on(this._status.namespace + eventName, func);
             return this;
         }
 
         , unbind : function(eventName) {
-            $(document).off(this._namespace + eventName);
-
+            this._container.off(this._status.namespace + eventName);
             return this;
+        }
+       */
+    }
+
+
+    var defautEvents = {
+        "mouseenter" : function(event) {
+        
+        },
+
+        "mouseleave" : function(event) {
+            var ui = this._ui;
+            ui.tooltipx.style("visibility", 'hidden');
+            ui.tooltipy.style("visibility", 'hidden');
+            ui.tooltip.style("visibility", 'hidden');
+        },
+
+        "mousemoveonarea" : function(event, params) {
+            var ui = this._ui,
+                data = this._data,
+                status = this._status,
+                format = this._options.tooltipxFormat,
+                innerHeight = this._status.innerHeight,
+                innerWidth = this._status.innerWidth,
+                index = params.index,
+                x = params.x,
+                y = params.y,
+                point = data[index];
+
+            ui.tooltipx.style("visibility", 'visible');
+            ui.tooltipx.html(moment(point.start).format(format));
+            ui.tooltipx.style("left", x + 'px');
+            ui.tooltipx.style("top", innerHeight + 'px');
+
+            ui.tooltipy.style("visibility", 'visible');
+            ui.tooltipy.html(point.price);
+            ui.tooltipy.style("left", innerWidth + 'px');
+            ui.tooltipy.style("top", status.y(point.price) + 'px');
+
+            ui.tooltip.style("visibility", 'visible');
+
+        },
+
+        "mousemoveoncandle" : function(event, params) {
+            p(params);
         }
     }
 
