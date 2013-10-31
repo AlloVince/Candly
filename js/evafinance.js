@@ -132,18 +132,31 @@ function p(a){
             crossyLineShapeRendering : 'crispEdges',
             crossyLineStrokeDasharray : '5,5',
 
+            tooltipTmpl : '开盘价：<%- p.open%><br/>收盘价：<%- p.close%><br/>最高价：<%- p.high%><br/>最低价：<%- p.low%>',
+            tooltipMargin : [0, 10, 0, 10],
             tooltipStyle  : {
+                'display' : 'block',
+                'width' : '110px',
+                'padding' : '5px',
+                'line-height' : '18px',
+                'position' : 'absolute',
                 'font-size' : '12px',
                 'background' : '#FFF',
+                'box-shadow' : '0 0 3px rgba(0, 0, 0, .2)',
+                'opacity' : '0.8',
                 'border' : '1px solid #E3F4FF'
             },
+            tooltipWidth : 120,
+            tooltipHeight : 82,
             tooltipxStyle : {
                 'display' : 'inline-block',
                 'position' : 'absolute',
                 'font-size' : '12px',
                 'background' : '#FFF',
+                'text-align' : 'center',
                 'border' : '1px solid #E3F4FF'
             }, 
+            tooltipxWidth : 95,
             tooltipxFormat : 'L hh:mm',
             tooltipyStyle : {
                 'display' : 'inline-block',
@@ -291,7 +304,8 @@ function p(a){
                 interval = root._chartType == 'area' ? status.areaInterval : status.candleInterval;
 
             //check mause whether out of chart range
-            if(x >= 0 && x <= innerWidth || y >= 0 && y <= innerHeight) {
+            //mouse effect area should be little larger than chart area, or else the edge area will be hard to detected
+            if(!( x < -10 || x > innerWidth + 10 || y < -10 || y > innerHeight + 10)) {
                 var index = 0;
                 interval.map(function(d, i){
                     if(x > d) {
@@ -391,6 +405,10 @@ function p(a){
         ui.crossLine = ui.chart.append('g').attr('class', 'evafinance-cross-layer');
 
         ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltip');
+        for(key in options.tooltipStyle) {
+            ui.tooltip.style(key, options.tooltipStyle[key]);
+        }
+
         ui.tooltipx = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipx');
         for(key in options.tooltipxStyle) {
             ui.tooltipx.style(key, options.tooltipxStyle[key]);
@@ -796,6 +814,7 @@ function p(a){
                 .attr('x2', status.innerWidth)
                 .attr('y1', 0)
                 .attr('y2', 0)
+                .attr('visibility', 'hidden')
                 .attr('shape-rendering', options.crossxLineShapeRendering)
                 .attr('stroke-dasharray', options.crossxLineStrokeDasharray)
                 .attr('stroke', options.crossxLineColor)
@@ -809,6 +828,7 @@ function p(a){
                 .attr('x2', 0)
                 .attr('y1', 0)
                 .attr('y2', status.innerHeight)
+                .attr('visibility', 'hidden')
                 .attr('shape-rendering', options.crossyLineShapeRendering)
                 .attr('stroke-dasharray', options.crossyLineStrokeDasharray)
                 .attr('stroke', options.crossyLineColor)
@@ -1135,6 +1155,65 @@ function p(a){
        */
     }
 
+    var onMauseMoveDefault = function(root, event, params) {
+        var ui = root._ui,
+            data = root._data,
+            status = root._status,
+            options = root._options,
+            format = options.tooltipxFormat,
+            innerHeight = status.innerHeight,
+            innerWidth = status.innerWidth,
+            marginTop = status.marginTop,
+            marginLeft = status.marginLeft,
+            marginRight = status.marginRight,
+            tooltipWidth = options.tooltipWidth,
+            tooltipHeight = options.tooltipHeight,
+            tooltipxWidth = options.tooltipxWidth,
+            tooltipMarginLeft = options.tooltipMargin[3],
+            tooltipMarginRight = options.tooltipMargin[1],
+            index = params.index,
+            x = params.x,
+            y = params.y,
+            point = data[index];
+
+        
+        var tooltipxX = x < marginLeft ? marginLeft : x;
+            tooltipxX =  x + tooltipxWidth > innerWidth ? innerWidth - tooltipxWidth : tooltipxX;
+        
+        ui.tooltipx.style("visibility", 'visible');
+        ui.tooltipx.html(moment(point.start).format(format));
+        ui.tooltipx.style("left", tooltipxX + 'px');
+        ui.tooltipx.style("top", marginTop + innerHeight + 'px');
+
+
+        ui.tooltipy.style("visibility", 'visible');
+        ui.tooltipy.html(point.price);
+        ui.tooltipy.style("left", marginLeft + innerWidth + 'px');
+        ui.tooltipy.style("top", status.y(point.price) + 'px');
+
+        y = y < 0 ? 0 : y; 
+        y = y > innerHeight ? innerHeight : y; 
+        ui.crossLine.select('line.evafinance-cross-xline')
+            .style("visibility", 'visible')
+            .attr('y1', status.y(point.price) + 'px')
+            .attr('y2', status.y(point.price) + 'px');
+
+
+        x = x < 0 ? 0 : x; 
+        x = x > innerWidth ? innerWidth : x; 
+        ui.crossLine.select('line.evafinance-cross-yline')
+            .style("visibility", 'visible')
+            .attr('x1', x + 'px')
+            .attr('x2', x + 'px');
+
+        var tooltipX = x > innerWidth / 2 ? x - tooltipWidth - tooltipMarginRight : x + tooltipMarginLeft;
+        var tooltipY =  status.y(point.price);
+        tooltipY = tooltipY + tooltipHeight + marginTop > innerHeight ? innerHeight - tooltipHeight - marginTop : tooltipY;
+        ui.tooltip.style("visibility", 'visible');
+        ui.tooltip.style("left", tooltipX + 'px');
+        ui.tooltip.style("top", tooltipY + 'px');
+        ui.tooltip.html(_.template(options.tooltipTmpl, { p : point}));    
+    }
 
     var defautEvents = {
         "mouseenter" : function(event) {
@@ -1146,36 +1225,18 @@ function p(a){
             ui.tooltipx.style("visibility", 'hidden');
             ui.tooltipy.style("visibility", 'hidden');
             ui.tooltip.style("visibility", 'hidden');
+            ui.crossLine.select('line.evafinance-cross-xline')
+                .style("visibility", 'hidden');
+            ui.crossLine.select('line.evafinance-cross-yline')
+                .style("visibility", 'hidden');
         },
 
         "mousemoveonarea" : function(event, params) {
-            var ui = this._ui,
-                data = this._data,
-                status = this._status,
-                format = this._options.tooltipxFormat,
-                innerHeight = this._status.innerHeight,
-                innerWidth = this._status.innerWidth,
-                index = params.index,
-                x = params.x,
-                y = params.y,
-                point = data[index];
-
-            ui.tooltipx.style("visibility", 'visible');
-            ui.tooltipx.html(moment(point.start).format(format));
-            ui.tooltipx.style("left", x + 'px');
-            ui.tooltipx.style("top", innerHeight + 'px');
-
-            ui.tooltipy.style("visibility", 'visible');
-            ui.tooltipy.html(point.price);
-            ui.tooltipy.style("left", innerWidth + 'px');
-            ui.tooltipy.style("top", status.y(point.price) + 'px');
-
-            ui.tooltip.style("visibility", 'visible');
-
+            onMauseMoveDefault(this, event, params);
         },
 
         "mousemoveoncandle" : function(event, params) {
-            p(params);
+            onMauseMoveDefault(this, event, params);
         }
     }
 
