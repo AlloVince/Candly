@@ -192,10 +192,6 @@ function p(a){
             timestampMin : 0,
             timestampMax : 0        
         }
-        //, defaultChartType = 'candle'
-        //, defaultPrevClose = null
-        //, displayRange = []  //be able to display a part of data 
-        //, container = null  //only container is a jQuery object
         //All d3js objects in ui
         , defaultUi = {
               chart : null
@@ -325,22 +321,6 @@ function p(a){
                 }
             }
         });
-
-
-
-
-        /*
-
-        
-        container.on('mouseenter', function(event) {
-            container.trigger(namespace + '.mouseenter');
-        }); 
-        
-        container.on('mouseleave', function(event) {
-            container.trigger(namespace + '.mouseleave');
-        }); 
-        */
-
     }
 
     function initUi(root) {
@@ -400,6 +380,8 @@ function p(a){
 
         ui.prevcloseLine = ui.chart.append('g').attr('class', 'evafinance-prevclose-layer');
 
+        ui.rangeLine = ui.chart.append('g').attr('class', 'evafinance-range-layer');
+
         ui.currentLine = ui.chart.append('g').attr('class', 'evafinance-current-layer');
 
         ui.crossLine = ui.chart.append('g').attr('class', 'evafinance-cross-layer');
@@ -413,6 +395,7 @@ function p(a){
         for(key in options.tooltipxStyle) {
             ui.tooltipx.style(key, options.tooltipxStyle[key]);
         }
+
         ui.tooltipy = d3.select(container.get(0)).append('div').attr('class', 'evafinance-tooltipy');
         for(key in options.tooltipyStyle) {
             ui.tooltipy.style(key, options.tooltipyStyle[key]);
@@ -618,8 +601,8 @@ function p(a){
                 if(typeof chartData[i + 1] !== 'undefined') {
                     interval = interval >= chartData[i + 1].start - n.start ? interval : chartData[i + 1].start - n.start;
                 }
-                n.start = (n.start - options.timezoneOffset) * 1000;
-                n.end = (n.end - options.timezoneOffset) * 1000;
+                n.start = n.start > 2000000000 ? n.start : (n.start - options.timezoneOffset) * 1000;
+                n.end = n.end > 2000000000 ? n.end : (n.end - options.timezoneOffset) * 1000;
                 priceMin = priceMin < n.low ? priceMin : n.low;
                 priceMax = priceMax > n.high ? priceMax : n.high;
 
@@ -664,6 +647,56 @@ function p(a){
 
         , setOption : function(key, value) {
             this._options[key] ? this._options[key] = value : '';
+            return this;
+        }
+
+        , shiftData : function(price) {
+            var data = this._data,
+                i = 0,
+                len = data.length,
+                lastPoint = data[len - 1],
+                point = $.extend({}, lastPoint),
+                timestamp = new Date().getTime();
+
+                p('shift');
+            point.open = lastPoint.close;
+            point.close = point.open;
+            point.start = timestamp;
+            point.end = timestamp;
+            point.price = price;
+            point.high = price;
+            point.low = price;
+
+            data.shift();
+            data.push(point);
+            this.setCurrent(point.price);
+            this.setData(data);
+            return this;
+        }
+
+        , setLastPrice : function(price) {
+            var data = this._data,
+                i = 0,
+                len = data.length,
+                lastPoint = $.extend({}, data[len - 1]),
+                timestamp = new Date().getTime();
+
+            lastPoint.price = price;
+            lastPoint.high = price > lastPoint.high ? price : lastPoint.high;
+            lastPoint.low = price < lastPoint.low ? price : lastPoint.low;
+            lastPoint.close = price;
+            lastPoint.start = timestamp;
+            lastPoint.end = timestamp;
+
+            /*
+            p(typeof price);
+            p(typeof lastPoint.high);
+            p(price > lastPoint.high);
+           */
+
+            data[len - 1] = lastPoint;
+            this.setCurrent(price);
+            this.setData(data);
             return this;
         }
 
@@ -835,6 +868,10 @@ function p(a){
                 .attr('stroke-width', options.crossyLineWidth);
         }
 
+        , drawRangeLine : function(){
+            return this;
+        }
+
         , drawChart : function(){
             drawXaxis(this);
             drawYaxis(this);
@@ -893,6 +930,7 @@ function p(a){
                 })		    
                 .attr('y1', function(d) { return status.y(d.high);})
                 .attr('y2', function(d) { return status.y(d.low); })
+                .attr('stroke-width', options.candleLineWidth)
                 .attr('stroke', function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
 
             ui.boardcandle.selectAll('rect.evafinance-chartcandle-body')
@@ -1141,18 +1179,6 @@ function p(a){
             this._container.off(eventName);
             return this;
         }
-        /*
-
-        , bind : function(eventName, func){
-            this._container.on(this._status.namespace + eventName, func);
-            return this;
-        }
-
-        , unbind : function(eventName) {
-            this._container.off(this._status.namespace + eventName);
-            return this;
-        }
-       */
     }
 
     var onMauseMoveDefault = function(root, event, params) {
@@ -1174,7 +1200,8 @@ function p(a){
             index = params.index,
             x = params.x,
             y = params.y,
-            point = data[index];
+            point = data[index],
+            chartType = root._chartType;
 
         
         var tooltipxX = x < marginLeft ? marginLeft : x;
@@ -1213,13 +1240,18 @@ function p(a){
         ui.tooltip.style("left", tooltipX + 'px');
         ui.tooltip.style("top", tooltipY + 'px');
         ui.tooltip.html(_.template(options.tooltipTmpl, { p : point}));    
+
+        if(chartType == 'area') {
+            ui.tooltip.style("visibility", 'hidden');
+        } else {
+            ui.boardcandle.selectAll('rect.evafinance-chartcandle-body')
+                .attr('stroke-width', function(d, i) {
+                    return i == index ? options.candleLineWidth + 1 : options.candleLineWidth;
+                });
+        }
     }
 
     var defautEvents = {
-        "mouseenter" : function(event) {
-        
-        },
-
         "mouseleave" : function(event) {
             var ui = this._ui;
             ui.tooltipx.style("visibility", 'hidden');
