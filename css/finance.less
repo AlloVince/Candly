@@ -3,9 +3,7 @@
 @import "mixins.less";
 
 body {
-    margin:0;
-    background:#F6F6F6;
-    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    //font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
 }
 
 
@@ -24,9 +22,41 @@ body {
 @colorOrange : #F05940;
 @colorGreen : #00A53C;
 
-.container {
-    margin-left:auto;
-    margin-right:auto;
-    max-width:@pageWidth;
+
+body {
+    padding-top: 50px;
+}
+.slider {
+    height:420px;
+    background:url(banner.png);
+
+    .jumbotron {
+        background:none;
+        padding-left:0;
+        padding-right:0;
+        padding-top:80px;
+        h1 {
+            font-size:50px;
+        }
+
+        h1, p {
+            color:#FFF;
+            padding:5px;
+            background-color:#547D31;
+            .opacity(0.9);
+        }
+    }
 }
 
+.slider-inner  {
+    padding:20px;
+}
+
+.banner-chart-wrapper {
+    margin-top:30px;
+    padding:10px;
+    background:#FFF;
+    border-radius : 10px;
+    .box-shadow(0 3px 9px rgba(0, 0, 0, 0.5));
+
+}

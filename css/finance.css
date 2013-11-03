@@ -1,10 +1,35 @@
 body {
-  margin: 0;
-  background: #F6F6F6;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  padding-top: 50px;
 }
-.container {
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 1180px;
+.slider {
+  height: 420px;
+  background: url(banner.png);
+}
+.slider .jumbotron {
+  background: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 80px;
+}
+.slider .jumbotron h1 {
+  font-size: 50px;
+}
+.slider .jumbotron h1,
+.slider .jumbotron p {
+  color: #FFF;
+  padding: 5px;
+  background-color: #547D31;
+  opacity: 0.9;
+  filter: alpha(opacity=90);
+}
+.slider-inner {
+  padding: 20px;
+}
+.banner-chart-wrapper {
+  margin-top: 30px;
+  padding: 10px;
+  background: #FFF;
+  border-radius: 10px;
+  -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
 }
