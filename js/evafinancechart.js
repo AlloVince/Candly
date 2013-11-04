@@ -169,6 +169,8 @@
             watermarkMargin : [0, 0, 0, 0],
             watermarkPosition : 'BL', //bottom left
 
+            numberalEngine : null,
+            templateEngine : null,
             events : {} //for overwrite default events
         }
 
@@ -184,6 +186,7 @@
             innerHeight : 0,
             priceMin : 0,
             priceMax : 0,
+            numeralFormat : '',
             timestampMin : 0,
             timestampMax : 0        
         }
@@ -612,6 +615,7 @@
             status.timestampMax = chartData[chartData.length - 1].start;
             status.maxNumLength = maxNumLength;
             status.interval = interval;
+            status.numeralFormat = '0.' + Array(maxNumLength).join('0');
             this._data = chartData;
 
             return this;
@@ -1258,7 +1262,8 @@
 
     var defautEvents = {
         'mouseleave' : function(event) {
-            var ui = this._ui;
+            var ui = this._ui,
+                options = this._options;
             ui.tooltipx.style('visibility', 'hidden');
             ui.tooltipy.style('visibility', 'hidden');
             ui.tooltip.style('visibility', 'hidden');
@@ -1266,6 +1271,9 @@
                 .style('visibility', 'hidden');
             ui.crossLine.select('line.efc-cross-yline')
                 .style('visibility', 'hidden');
+
+            ui.boardcandle.selectAll('rect.efc-chartcandle-body')
+                .attr('stroke-width', options.candleLineWidth);
         },
 
         'mousemoveonarea' : function(event, params) {
