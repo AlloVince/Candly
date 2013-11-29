@@ -24,6 +24,7 @@
         , VERSION = '1.0.0'
         , defaultOptions = {
             container : null,
+            chartType : 'candle',
             timezoneOffset : 0,
             width : 0,
             height : 0,
@@ -33,6 +34,7 @@
             marginBottom : 12,
 
             //x axis
+            xAxisVisibility : 'visible',
             xAxisStroke : '#CCC',
             xAxisShapeRendering : 'crispEdges',
             xAxisFill : 'none',
@@ -46,30 +48,34 @@
             dateFormatYear : 'YYYY',
 
             //y axis
+            yAxisVisibility : 'visible',
             yAxisStroke : '#CCC',
             yAxisShapeRendering : 'crispEdges',
             yAxisFill : 'none',
             yAxisTicks : 5,
             yAxisTickSize : 0,
             yAxisOrient : 'right',
+
+            //grid
+            xGridVisibility : 'visible',
             xGridStroke : '#EEE',
             xGridShapeRendering : 'crispEdges',
             xGridFill : 'none',
             xGridTicks : 5,
+            yGridVisibility : 'visible',
             yGridStroke : '#EEE',
             yGridShapeRendering : 'crispEdges',
             yGridFill : 'none',
             yGridTicks : 5,
             yAxisLabelSize : 12,
-            yAxisLabelColor : '#333',
+            yAxisLabelColor : '#666',
 
             //area chart
             areaFillEnable : true,
-            //areaFillColor : '#FFCCB8',
-            areaFillColor : '#E3F4FF',
+            //areaFillColor : '#E3F4FF', //investing style
+            areaFillColor : '#EAEEF3',
             areaFillOpacity : 0.8,
             areaLineEnable : true,
-            //areaLineColor : '#F9653C',
             areaLineColor : '#45496E',
             areaLineWidth : 1,
             areaPointEnable : false,
@@ -84,8 +90,10 @@
 
             //candle chart
             candleWidthPercent : 0.5,
-            candleBodyUpColor : '#32EA32',
-            candleBodyDownColor : '#FE3232', 
+            //candleBodyUpColor : '#32EA32',  //investing style
+            //candleBodyDownColor : '#FE3232', 
+            candleBodyUpColor : '#A3D900',
+            candleBodyDownColor : '#FF4D4D', 
             candleBodyStrokeWidth : '1',
             candleLineUpColor : '#333',
             candleLineDownColor : '#333',
@@ -96,19 +104,46 @@
             //candleTransitionEase : 'bounce',
 
             //prevcloseLine
+            prevclose : 0,
             prevcloseLineEnable : true,
             prevcloseLineColor : '#D95151',
             prevcloseLineWidth : 1,
             prevcloseLineShapeRendering : 'crispEdges',
 
+            //rangeLine
+            rangeLineEnable : false,
+            rangeLineLowColor : '#FF4D4D',
+            rangeLineHighColor : '#A3D900',
+            rangeLineLowWidth : 1,
+            rangeLineLowShapeRendering : 'crispEdges',
+            rangeLineLowStrokeDasharray : '5,5',
+            rangeLineLowRectHeight : 16,
+            rangeLineLowRectFill : '#27415E',
+            rangeLineLowRectOpacity : 0,
+            rangeLineLowTextFontSize : 12,
+            rangeLineLowTextColor : '#FF4D4D',
+            rangeLineLowTextMargin : 3,
+            rangeLineHighWidth : 1,
+            rangeLineHighShapeRendering : 'crispEdges',
+            rangeLineHighStrokeDasharray : '5,5',
+            rangeLineHighRectHeight : 16,
+            rangeLineHighRectFill : '#27415E',
+            rangeLineHighRectOpacity : 0,
+            rangeLineHighTextFontSize : 12,
+            rangeLineHighTextColor : '#A3D900',
+            rangeLineHighTextMargin : 3,
+
+
             //current line
             currentLineEnable : true,
+            currentLineVisibility : 'visible',
             currentLineColor : '#333',
             currentLineWidth : 1,
             currentLineShapeRendering : 'crispEdges',
             currentLineRectHeight : 16,
-            currentLineRectFill : '#000',
-            currentLineRectOpacity : 0.7,
+            //currentLineRectFill : '#000', //investing style
+            currentLineRectFill : '#27415E',
+            currentLineRectOpacity : 1,
             currentLineTextFontSize : 12,
             currentLineTextColor : '#FFF',
             currentLineTextMargin : 3,
@@ -162,10 +197,11 @@
             }, 
             
             //watermark
+            watermarkEnable : 0,
             watermarkUrl : '',
             watermarkWidth : 0,
             watermarkHeight : 0,
-            watermarkOpacity : 0.2,
+            watermarkOpacity : 1,
             watermarkMargin : [0, 0, 0, 0],
             watermarkPosition : 'BL', //bottom left
 
@@ -201,6 +237,7 @@
             , boardarea : null
             , boardcandle : null
             , prevcloseLine : null
+            , rangeLine : null
             , currentLine : null
             , crossLine : null
             , tooltip : null
@@ -217,7 +254,7 @@
 
 
     function EvaFinanceChart (inputOptions, inputUi) {
-        var options = $.extend(defaultOptions, inputOptions),
+        var options = $.extend({}, defaultOptions, inputOptions),
             container = $(options.container),
             namespace =  'efc_' + _.uniqueId() + '_';
 
@@ -239,14 +276,14 @@
         this._options = $.extend({}, options);
         this._status = $.extend({}, defaultStatus);
         this._ui = $.extend({}, defaultUi);
-        this._chartType = 'candle';
-        this._prevClose = null;
+        this._chartType = options.chartType || 'candle';
+        this._prevClose = options.prevclose || null;
         this._current = null;
         this._data = {};
         this._status.namespace = namespace;
+        this._eventInited = false;
 
         initUi(this);    
-        initEvent(this);
     }
 
     function ControlEvent(root){
@@ -419,6 +456,12 @@
             .scale(x)
             .orient('bottom')
             .tickFormat(function(i) { 
+
+                //NOTE: maybe d3 bug,  when data only have 2 points, i will be 0.2 in second loop
+                if(typeof data[i] === 'undefined') {
+                    return false;
+                }
+
                 var nowMoment = moment(data[i].start);
                 xAxisLabels.push(i);
 
@@ -475,6 +518,8 @@
             //.attr('stroke-dasharray', '5,5')
             .attr('stroke', options.xGridStroke);
 
+        ui.xGrid.attr('visibility', options.xGridVisibility);
+        ui.xAxis.attr('visibility', options.xAxisVisibility);
     
     }
 
@@ -491,7 +536,7 @@
         var domainDiff = (status.priceMax - status.priceMin) / 20;
 
         if(status.maxNumLength > 2) {
-            var yAxisMax = status.priceMax + domainDiff, //add 10% domain offset
+            var yAxisMax = status.priceMax + domainDiff, //add 5% domain offset
             yAxisMin = status.priceMin - domainDiff,
             yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? prevClose + domainDiff : yAxisMax,
             yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? prevClose - domainDiff : yAxisMin;
@@ -540,6 +585,9 @@
             .attr('shape-rendering', options.yGridShapeRendering)
             //.attr('stroke-dasharray', '5,5')
             .attr('stroke', options.yGridStroke);
+            
+        ui.yGrid.attr('visibility', options.yGridVisibility);
+        ui.yAxis.attr('visibility', options.yAxisVisibility);
     
     }
 
@@ -569,6 +617,10 @@
         setData : function(input) {
             if(input instanceof Array === false) {
                 throw new TypeError('Chart data require array type');
+            }
+
+            if(input.length < 1) {
+                throw new TypeError('Chart data not enough to create chart');
             }
 
             var options = this._options,
@@ -615,8 +667,15 @@
             status.timestampMax = chartData[chartData.length - 1].start;
             status.maxNumLength = maxNumLength;
             status.interval = interval;
-            status.numeralFormat = '0.' + Array(maxNumLength).join('0');
+            status.numeralFormat = maxNumLength > 0 ? '0.' + Array(maxNumLength).join('0') : '0';
             this._data = chartData;
+
+
+            //bind event when data seted
+            if(this._eventInited === false) {
+                initEvent(this);
+                this._eventInited = true;
+            }
 
             return this;
         }
@@ -798,6 +857,8 @@
             }
             var y = status.y(currentPrice);
 
+            ui.currentLine.attr('visibility', options.currentLineVisibility);
+
             var line = ui.currentLine.select('line.efc-current-line').empty() ? 
                     ui.currentLine.append('svg:line').attr('class', 'efc-current-line')
                 : ui.currentLine.select('line.efc-current-line');
@@ -806,6 +867,7 @@
                 .attr('x2', status.innerWidth)
                 .attr('y1', y)
                 .attr('y2', y)
+                
                 .attr('shape-rendering', options.currentLineShapeRendering)
                 .attr('stroke', options.currentLineColor)
                 .attr('stroke-width', options.currentLineWidth);
@@ -870,10 +932,96 @@
         }
 
         , drawRangeLine : function(){
+            var options = this._options,
+                status = this._status,
+                ui = this._ui,
+                data = this._data,
+                rangeHighPrice = data[0].price,
+                rangeLowPrice = data[0].price,
+                i = 0;
+
+            for(i in data) {
+                rangeHighPrice = rangeHighPrice < data[i].price ? data[i].price : rangeHighPrice;
+                rangeLowPrice = rangeLowPrice > data[i].price ? data[i].price : rangeLowPrice;
+            }
+
+            var y = status.y(rangeLowPrice);
+
+            var line = ui.rangeLine.select('line.efc-range-line-low').empty() ? 
+                    ui.rangeLine.append('svg:line').attr('class', 'efc-range-line-low')
+                : ui.rangeLine.select('line.efc-range-line-low');
+            
+            line.attr('x1', 0)
+                .attr('x2', status.innerWidth)
+                .attr('y1', y)
+                .attr('y2', y)
+                .attr('shape-rendering', options.rangeLineLowShapeRendering)
+                .attr('stroke', options.rangeLineLowColor)
+                .attr('stroke-width', options.rangeLineLowWidth);
+
+            var rect = ui.rangeLine.select('rect.efc-range-rect-low').empty() ? 
+                    ui.rangeLine.append('svg:rect').attr('class', 'efc-range-rect-low')
+                    : ui.rangeLine.select('rect.efc-range-rect-low');
+
+            rect.attr('x', status.innerWidth)
+                .attr('y', y - options.rangeLineLowRectHeight / 2)		  
+                .attr('height', options.rangeLineLowRectHeight)
+                .attr('width', status.marginRight)
+                .attr('fill', options.rangeLineLowRectFill)
+                .attr('opacity', options.rangeLineLowRectOpacity);
+
+            var text = ui.rangeLine.select('text.efc-range-text-low').empty() ?
+                ui.rangeLine.append('text').attr('class', 'efc-range-text-low')
+                : ui.rangeLine.select('text.efc-range-text-low');
+
+            text.text(rangeLowPrice)
+                .attr('font-size', options.rangeLineLowTextFontSize + 'px')
+                .attr('x', status.innerWidth + options.rangeLineLowTextMargin)
+                .attr('y', y - options.rangeLineLowRectHeight / 2 + options.rangeLineLowTextFontSize)
+                .attr('fill', options.rangeLineLowTextColor);
+
+            y = status.y(rangeHighPrice);
+
+            line = ui.rangeLine.select('line.efc-range-line-high').empty() ? 
+                    ui.rangeLine.append('svg:line').attr('class', 'efc-range-line-high')
+                : ui.rangeLine.select('line.efc-range-line-high');
+            
+            line.attr('x1', 0)
+                .attr('x2', status.innerWidth)
+                .attr('y1', y)
+                .attr('y2', y)
+                .attr('shape-rendering', options.rangeLineHighShapeRendering)
+                .attr('stroke', options.rangeLineHighColor)
+                .attr('stroke-width', options.rangeLineHighWidth);
+
+            rect = ui.rangeLine.select('rect.efc-range-rect-high').empty() ? 
+                    ui.rangeLine.append('svg:rect').attr('class', 'efc-range-rect-high')
+                    : ui.rangeLine.select('rect.efc-range-rect-high');
+
+            rect.attr('x', status.innerWidth)
+                .attr('y', y - options.rangeLineHighRectHeight / 2)		  
+                .attr('height', options.rangeLineHighRectHeight)
+                .attr('width', status.marginRight)
+                .attr('fill', options.rangeLineHighRectFill)
+                .attr('opacity', options.rangeLineHighRectOpacity);
+
+            text = ui.rangeLine.select('text.efc-range-text-high').empty() ?
+                ui.rangeLine.append('text').attr('class', 'efc-range-text-high')
+                : ui.rangeLine.select('text.efc-range-text-high');
+
+            text.text(rangeHighPrice)
+                .attr('font-size', options.rangeLineHighTextFontSize + 'px')
+                .attr('x', status.innerWidth + options.rangeLineHighTextMargin)
+                .attr('y', y - options.rangeLineHighRectHeight / 2 + options.rangeLineHighTextFontSize)
+                .attr('fill', options.rangeLineHighTextColor);
+
+
             return this;
         }
 
         , drawChart : function(){
+
+    
             drawXaxis(this);
             drawYaxis(this);
 
@@ -887,6 +1035,14 @@
 
             if(this._options.crossLineEnable) {
                 this.drawCrossLine();
+            }
+
+            if(this._options.rangeLineEnable) {
+                this.drawRangeLine();
+            }
+
+            if(this._options.watermarkEnable) {
+                this.drawWaterMark();
             }
 
             if(this._chartType === 'area') {
