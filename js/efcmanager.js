@@ -9,6 +9,7 @@
  *              1. 数据类型 如 EURUSD
  *              2. 数据频率 如 1 （代表1分钟图）
  *              3. 数据数量 如 50 代表数据对象中有50条数据
+ *              TODO : 以后会有条件4：数据起始结束日期
  *              上述三个条件生成唯一的数据key ： EURUSD_1_50
  * - DataPool : 数据池，所有的数据对象在加载后都会存入数据池，可以供ChartObj复用
  *              数据池提供定时更新机制
@@ -19,9 +20,12 @@
  *
  *  事件机制
  *  chartadded : 添加一个chartobj
+ *  chartchange : 更改一个chartobj参数
+ *  chartupdated : 更新一个chartobj（数据载入后）
  *  chartcollected : 所有chartobj添加完毕
  *  datainsert : 插入一个dataObj 
  *  startload : 数据开始加载
+ *  startrefresh : 数据开始刷新
  *  dataloaded : 数据加载完成后触发
  *  chartcreated : 图表绘制完成后触发
  *  datarefreshed : 数据更新后触发
@@ -82,6 +86,7 @@
         }
         console.log.apply(console, arguments);
     }
+
         
     /************************************
         Constants
@@ -96,6 +101,7 @@
             events : {},
             chartEnable : true,
             cometEnable : true,
+            dateFormat : '',
             chartUrl : '/data.php',
             cometUrl : '/comet.php'
         }
@@ -107,6 +113,7 @@
               //rows : null,
               refreshInterval : null,
               refresh : false,
+              refreshHandler : null,
               data : [] 
         }
         , dataPool = {}
@@ -176,8 +183,36 @@
         EvaFinanceChart Prototype
     ************************************/
     efcmanager.fn = EfcManager.prototype = {
-        loadData : function() {
-        
+        loadData : function(dataObj) {
+            var root = this;
+            $.ajax({
+                url : dataObj.uriObj.toString(),
+                dataTyle : options.dataType,
+                error : function(response) {
+                    p('dataload error %o', response);
+                },
+                success : function(response){
+                    dataObj.data = response;
+                    dataObj.lastupdate = new Date().getTime();
+                    root.trigger('dataloaded', [dataObj]);
+                }
+            });
+        }
+
+        , refreshData : function(dataObj) {
+            var root = this;
+            $.ajax({
+                url : dataObj.uriObj.toString(),
+                dataTyle : options.dataType,
+                error : function(response) {
+                    p('dataload error %o', response);
+                },
+                success : function(response){
+                    dataObj.data = response;
+                    dataObj.lastupdate = new Date().getTime();
+                    root.trigger('datarefreshed', [dataObj]);
+                }
+            });        
         }
 
         , getChartPool : function() {
@@ -197,7 +232,9 @@
         }
 
         , collectChartObj : function() {
+
             var root = this;
+
             $(options.efcSelector).each(function() {
                 root.addChartObj(this);
             });
@@ -225,7 +262,7 @@
 
             for(i in chartPool) {
                 //chartObj already added
-                if(chartPool[i].container[0] === container[0]) {
+                if(chartPool[i].container && chartPool[i].container[0] === container[0]) {
                     return this;
                 }
             }
@@ -254,7 +291,7 @@
 
             chartPool.push(chartObj);
 
-            p("chartObj added : %o", chartObj);
+            //p("chartObj added : %o", chartObj);
 
             this.trigger('chartadded', [chartObj]);
 
@@ -262,19 +299,51 @@
         }
 
         , changeChartObj : function(selectorOrDom, attrs, options) {
-        
+            var chartChanger = $(selectorOrDom),
+                container = $(chartChanger.attr('data-efc-target')),
+                chartObj = this.getChartObj(container),
+                symbol = chartChanger.attr('data-efc-symbol') || chartObj.symbol,
+                interval = chartChanger.attr('data-efc-interval') || chartObj.interval,
+                rows = chartChanger.attr('data^efc-rows') || chartObj.rows;
+
+            chartObj.symbol = symbol;
+            chartObj.interval = interval;
+            chartObj.rows = rows;
+            chartObj.shiftFlag = false;
+
+
+            this.trigger('chartchange', [chartObj]);
+        }
+
+        , chartObjGC : function() {
+            var i = 0,
+                page = $('body');
+
+            p("Before GC chartPool length : %s", chartPool.length);
+            for(i in chartPool) {
+                if(!page.has(chartPool[i].container[0]).length) {
+                    p("GC : %o", chartPool[i].container[0]);
+                    chartPool.splice(i, 1);
+                }
+            }
+            p("After GC chartPool length : %s", chartPool.length);
+            
         }
 
         , removeChartObj : function() {
         
         }
 
-        , getChartObj : function() {
-        
-        }
+        , getChartObj : function(selectorOrDom) {
+            var container = $(selectorOrDom),
+                i = 0;
+            for(i in chartPool) {
+                if(chartPool[i].container && container[0] === chartPool[i].container[0]) {
+                    return chartPool[i];
+                }
+            }
 
-        , chartObjToDataObj : function() {
-        
+            return false;
         }
 
         , addDataObj : function(chartObj) {
@@ -317,7 +386,20 @@
         
         }
 
-        , getDataObj : function() {
+        , getDataObj : function(chartObjOrDatakey) {
+            if(typeof chartObjOrDatakey === 'object') {
+                var datakey = this.getDatakey(chartObjOrDatakey.symbol, chartObjOrDatakey.interval, chartObjOrDatakey.rows);
+                if(typeof dataPool[datakey] === 'undefined') {
+                    return false;
+                }
+                return dataPool[datakey];
+            
+            } else {
+                if(typeof dataPool[chartObjOrDatakey] === 'undefined') {
+                    return false;
+                }
+                return dataPool[chartObjOrDatakey];
+            }
         
         }
 
@@ -328,7 +410,11 @@
                 rows,
                 charts = [],
                 chartObj = {};
-            [symbol, interval, rows] = datakey.split('_');
+
+                datakey = datakey.split('_');
+                symbol = datakey[0];
+                interval = datakey[1];
+                rows = datakey[2];
             for(i in chartPool) {
                 chartObj = chartPool[i];
                 if(chartObj.symbol == symbol && chartObj.interval == interval && chartObj.rows == rows) {
@@ -351,7 +437,7 @@
             
             for(i in cometPool) {
                 //chartObj already added
-                if(cometPool[i].container[0] === container[0]) {
+                if(cometPool[i].container && cometPool[i].container[0] === container[0]) {
                     return this;
                 }
             }
@@ -370,6 +456,11 @@
 
 
         , comet : function() {
+            //comet already started
+            if(cometRequestHandler) {
+                return this;
+            }
+
             var root = this,
                 symbols = [],
                 symbolString,
@@ -398,6 +489,34 @@
                 }    
             });
             return cometRequestHandler;
+        }
+
+        , cometObjGC : function() {
+        
+        }
+
+        , reboot : function() {
+            this.distroy();
+            this.collectChartObj();
+            this.collectCometObj();
+            return this;
+        }
+
+        , distroy : function() {
+            var i = 0;
+            chartPool = [];
+            cometPool = [];
+            for(i in dataPool) {
+                clearInterval(dataPool[i].refreshHandler);
+            }
+            dataPool = [];
+            cometRequestHandler.abort();
+            cometRequestHandler = null;
+        }
+
+        , clearChartPool : function() {
+            chartPool = [];
+            return this;
         }
 
         , trigger : function(eventName, params) {
@@ -464,9 +583,20 @@
         'chartadded' : function(event, chartObj) {
             this.addDataObj(chartObj);
         },
+
+        'chartchange' : function(event, chartObj) {
+            var dataObj = this.getDataObj(chartObj);
+            if(!dataObj) {
+                return this.addDataObj(chartObj);
+            }
+            chartObj.efc.setData(dataObj.data);
+            chartObj.efc.updateChart();
+            chartObj.efc.updateCurrentLine();
+            this.trigger('chartupdated', [chartObj]);
+        },
         
         'chartcollected' : function(event) {
-        
+            this.chartObjGC();
         },
 
         'startload' : function() {
@@ -480,19 +610,7 @@
                 return false;
             }
 
-            $.ajax({
-                url : dataObj.uriObj.toString(),
-                dataTyle : options.dataType,
-                error : function(response) {
-                    p('dataload error %o', response);
-                },
-                success : function(response){
-                    dataObj.data = response;
-                    dataObj.lastupdate = new Date().getTime();
-                    root.trigger('dataloaded', [dataObj]);
-                }
-            });
-
+            root.loadData(dataObj);
         },
 
         'dataloaded' : function(event, dataObj) {
@@ -501,16 +619,31 @@
                 charts = root.searchConnectedCharts(dataObj.datakey),
                 chartObj = {};
             for(i in charts) {
-                chartObj = charts[i];
-                chartObj.efc.setData(dataObj.data);
-                chartObj.efc.drawChart();
-                chartObj.isReady = true;
-                root.trigger('chartcreated', [chartObj]);
+                if(!chartObj.isReady) {
+                    chartObj = charts[i];
+                    chartObj.efc.setData(dataObj.data);
+                    chartObj.efc.drawChart();
+                    chartObj.isReady = true;
+                    root.trigger('chartcreated', [chartObj]);                
+                } else {
+                    chartObj.efc.setData(dataObj.data);
+                    chartObj.efc.updateChart();
+                    chartObj.efc.updateCurrentLine();
+                    root.trigger('chartupdated', [chartObj]);                
+                }
+
             }
+
+            if(dataObj.refresh) {
+                dataObj.refreshHandler = setInterval(function(){
+                    root.refreshData(dataObj);
+                    root.trigger('startrefresh', dataObj);
+                }, dataObj.refreshInterval);
+            }
+
         },
 
         'cometadded' : function(event, cometObj) {
-            
         },
 
         'cometcollected' : function(event) {
@@ -518,7 +651,7 @@
         },
 
         'cometed' : function(event) {
-            p('cometed triggered');
+            //p('cometed triggered');
             //p("comet data : %o", cometData);
             //p("last comet data : %o", lastCometData);
 
@@ -555,7 +688,7 @@
         },
 
         'pricechanged' : function(event, symbol, price, lastPrice) {
-            p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
+            //p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
 
             var root = this,
                 i,
@@ -596,7 +729,24 @@
             }
         },
 
-        'datarefreshed' : function(event, key) {
+        'startrefresh' : function(event, dataObj) {
+        
+        },
+
+        'datarefreshed' : function(event, dataObj) {
+            p("datarefreshed triggered %o", dataObj);
+
+            var root = this,
+                i,
+                charts = root.searchConnectedCharts(dataObj.datakey),
+                chartObj = {};
+            //TODO: not chartObj here will recollect memory
+            for(i in charts) {
+                chartObj = charts[i];
+                chartObj.efc.setData(dataObj.data);
+                chartObj.efc.updateChart();
+                root.trigger('chartrefreshed', [chartObj]);
+            }
         }
     }
 

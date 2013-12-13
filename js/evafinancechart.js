@@ -165,16 +165,18 @@
             tooltipMargin : [0, 10, 0, 10],
             tooltipStyle  : {
                 'display' : 'block',
-                'width' : '110px',
-                'padding' : '5px',
-                'line-height' : '18px',
+                //'width' : '110px',
+                'padding' : '10px 15px 8px',
+                'line-height' : '20px',
                 'position' : 'absolute',
-                'font-size' : '12px',
-                'background' : '#FFF',
-                'box-shadow' : '0 0 3px rgba(0, 0, 0, .2)',
+                'font-size' : '13px',
+                'color' : '#fff',
+                'background' : 'rgb(57, 157, 179)',
+                'border-radius' : '10px',
+                'box-shadow' : '0px 0px 3px 3px rgba(0, 0, 0, 0.3)',
                 'opacity' : '0.8',
-                'visibility' : 'hidden',
-                'border' : '1px solid #E3F4FF'
+                'visibility' : 'hidden'
+                //'border' : '1px solid #E3F4FF'
             },
             tooltipWidth : 120,
             tooltipHeight : 82,
@@ -956,6 +958,7 @@
                 .attr('y1', y)
                 .attr('y2', y)
                 .attr('shape-rendering', options.rangeLineLowShapeRendering)
+                .attr('stroke-dasharray', options.rangeLineLowStrokeDasharray)
                 .attr('stroke', options.rangeLineLowColor)
                 .attr('stroke-width', options.rangeLineLowWidth);
 
@@ -992,6 +995,7 @@
                 .attr('y2', y)
                 .attr('shape-rendering', options.rangeLineHighShapeRendering)
                 .attr('stroke', options.rangeLineHighColor)
+                .attr('stroke-dasharray', options.rangeLineHighStrokeDasharray)
                 .attr('stroke-width', options.rangeLineHighWidth);
 
             rect = ui.rangeLine.select('rect.efc-range-rect-high').empty() ? 
@@ -1046,8 +1050,10 @@
             }
 
             if(this._chartType === 'area') {
+                this.hideCandleChart();
                 this.drawAreaChart();
             } else {
+                this.hideAreaChart();
                 this.drawCandleChart();
             }
 
@@ -1114,7 +1120,15 @@
                 .attr('fill',function(d) { return d.open > d.close ? options.candleBodyDownColor : options.candleBodyUpColor;});
 
             status.candleInterval = interval;
+            ui.boardcandle.attr('visibility', 'visible');
 
+            return this;
+        }
+
+
+        , hideCandleChart : function(){
+            var ui = this._ui;
+            ui.boardcandle.attr('visibility', 'hidden');
             return this;
         }
 
@@ -1181,6 +1195,14 @@
                     .attr('cy', function(d, i) { return status.y(d.price) })
                     .attr('r', options.areaPointSize);
             }
+            
+            ui.boardarea.attr('visibility', 'visible');
+            return this;
+        }
+
+        , hideAreaChart : function(){
+            var ui = this._ui;
+            ui.boardarea.attr('visibility', 'hidden');
             return this;
         }
 
@@ -1214,22 +1236,26 @@
             , ease = options.areaTransitionEase
             ;
 
-            ui.boardarea.selectAll('circle.efc-chartarea-circle').data(data)
-                .transition()
-                .ease(ease)
-                .duration(speed)
-                .attr('cx', function(d, i) { return status.x(i); })
-                .attr('cy', function(d, i) { return status.y(d.price); });
-
             ui.boardarea.select('path.efc-chartarea-line').datum(data).transition()
                 .duration(speed)
                 .ease(ease)
                 .attr('d', line);
 
-            ui.boardarea.select('path.efc-chartarea-fill').datum(data).transition()
-                .duration(speed)
-                .ease(ease)
-                .attr('d', area);
+            if(options.areaPointEnable) {
+                ui.boardarea.selectAll('circle.efc-chartarea-circle').data(data)
+                    .transition()
+                    .ease(ease)
+                    .duration(speed)
+                    .attr('cx', function(d, i) { return status.x(i); })
+                    .attr('cy', function(d, i) { return status.y(d.price); });
+            }
+
+            if(options.areaFillEnable) {
+                ui.boardarea.select('path.efc-chartarea-fill').datum(data).transition()
+                    .duration(speed)
+                    .ease(ease)
+                    .attr('d', area);
+            }
         
             return this;
         }
