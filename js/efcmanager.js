@@ -140,6 +140,8 @@
         , cometRequestHandler = null
         , cometTimestamp = null
         , cometLastPrice = null
+        , cometProcess = 0
+        , maxCometProcess = 1
         , options = {}
         , efcAttrs = ['symbol', 'interval', 'rows', 'refresh']
         , hasModule = (typeof module !== 'undefined' && module.exports);
@@ -457,9 +459,10 @@
 
         , comet : function() {
             //comet already started
-            if(cometRequestHandler) {
+            if(cometProcess >= maxCometProcess) {
                 return this;
             }
+            cometProcess++;
 
             var root = this,
                 symbols = [],
@@ -471,6 +474,7 @@
             }
             symbols = _.uniq(symbols);
             symbolString = symbols.join('_');
+            p('comet strings : %s', symbolString);
 
             cometRequestHandler = $.ajax({
                 url : options.cometUrl,
@@ -485,14 +489,20 @@
                     cometData = response.data.slice(0);
                     cometTimestamp = response.timestamp;
                     root.trigger('cometed');
+                    cometProcess--;
                     root.comet();
                 }    
             });
             return cometRequestHandler;
         }
 
+        , stopComet : function() {
+            cometRequestHandler.abort();
+            cometRequestHandler = null;
+            cometProcess = 0;        
+        }
+
         , cometObjGC : function() {
-        
         }
 
         , reboot : function() {
@@ -510,8 +520,7 @@
                 clearInterval(dataPool[i].refreshHandler);
             }
             dataPool = [];
-            cometRequestHandler.abort();
-            cometRequestHandler = null;
+            this.stopComet();
         }
 
         , clearChartPool : function() {
