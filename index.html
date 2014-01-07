@@ -12,6 +12,9 @@
 
     <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="bootstrap/css/bootstrap-theme.min.css">
+    <!--[if lte IE 8]>
+    <link rel="stylesheet" href="css/bootstrap-ie7.css">
+    <![endif]-->
     <link rel="stylesheet" href="css/finance.css">
 
     <!--[if lte IE 8]>
@@ -29,7 +32,9 @@
     <script src="js/underscore.min.js"></script>
     <script src="js/numeral.js"></script>
     <script src="js/moment.js"></script>
+    <script src="js/Uri.js"></script>
     <script src="js/evafinancechart.js"></script>
+    <script src="js/efcmanager.js"></script>
     <script src="data/usdollar.js"></script>
     <script src="data/eurusd.js"></script>
 </head>
@@ -90,8 +95,6 @@
                                 <a href="#" class="btn btn-default active ">Candle Stick Chart</a>
                             </div>
                             <div id="banner-chart"></div>
-                            
-
                         </div>
                     </div>
                 </div>
@@ -101,14 +104,19 @@
 
 
     <div class="container">
-        <div class="page-header">
-            <h2>Basic</h2>
-        </div>
 
-        <div class="row">
-            <div class="col-md-4">.col-md-4</div>
-            <div class="col-md-8">.col-md-8</div>
-        </div>
+<div id="quick-startchart" class="efc" data-efc-symbol="XAUUSD" data-efc-interval="1" data-efc-rows="90" data-efc-refresh="1" data-efc-options='{"height":260,"prevclose":1235.98,"watermarkEnable":1,"watermarkUrl":"/watermark.png","watermarkWidth":194,"watermarkHeight":24,"watermarkMargin":[0, 0, 10, 10]}'></div>
+
+<script>
+$(document).ready(function(){
+    var em = new EfcManager({
+        'chartUrl' : 'http://api.markets.wallstreetcn.com/v1/chart',
+        'cometUrl' : 'http://api.markets.wallstreetcn.com/v1/price',
+        'dataType' : 'jsonp'
+    });
+});
+</script>
+
     </div><!--main container end-->
 
 

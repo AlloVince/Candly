@@ -101,7 +101,9 @@
             events : {},
             chartEnable : true,
             cometEnable : true,
-            dateFormat : '',
+            cometType : 'polling',  //or comet
+            cometInterval : 2000,      //default polling interval
+            dateFormat : 'L HH:mm',
             chartUrl : '/data.php',
             cometUrl : '/comet.php'
         }
@@ -138,10 +140,12 @@
         , lastCometData = [] 
         , cometData = []
         , cometRequestHandler = null
+        , cometTimeoutHandler = null
         , cometTimestamp = null
         , cometLastPrice = null
         , cometProcess = 0
         , maxCometProcess = 1
+        , windowLoad = false
         , options = {}
         , efcAttrs = ['symbol', 'interval', 'rows', 'refresh']
         , hasModule = (typeof module !== 'undefined' && module.exports);
@@ -189,12 +193,12 @@
             var root = this;
             $.ajax({
                 url : dataObj.uriObj.toString(),
-                dataTyle : options.dataType,
+                dataType : options.dataType,
                 error : function(response) {
                     p('dataload error %o', response);
                 },
                 success : function(response){
-                    dataObj.data = response;
+                    dataObj.data = response.results;
                     dataObj.lastupdate = new Date().getTime();
                     root.trigger('dataloaded', [dataObj]);
                 }
@@ -205,12 +209,12 @@
             var root = this;
             $.ajax({
                 url : dataObj.uriObj.toString(),
-                dataTyle : options.dataType,
+                dataType : options.dataType,
                 error : function(response) {
                     p('dataload error %o', response);
                 },
                 success : function(response){
-                    dataObj.data = response;
+                    dataObj.data = response.results;
                     dataObj.lastupdate = new Date().getTime();
                     root.trigger('datarefreshed', [dataObj]);
                 }
@@ -480,19 +484,27 @@
                 url : options.cometUrl,
                 dataType : options.dataType, 
                 data : {
-                    type : symbolString,
+                    symbol : symbolString,
                     timestamp : cometTimestamp,
                     price : cometLastPrice
                 },
                 success : function(response) {
                     lastCometData = cometData.slice(0);
-                    cometData = response.data.slice(0);
+                    cometData = response.results.slice(0);
                     cometTimestamp = response.timestamp;
                     root.trigger('cometed');
                     cometProcess--;
-                    root.comet();
+
+                    if(options.cometType == 'comet') {
+                        root.comet();
+                    } else {
+                        cometTimeoutHandler = setTimeout(function(){
+                            root.comet();
+                        }, options.cometInterval);
+                    }
                 }    
             });
+        
             return cometRequestHandler;
         }
 
@@ -548,11 +560,15 @@
     function updateDigital(cometObj, price, lastPrice) {
         var container = cometObj.container,
             prevclose = container.find('.prevclose').val(),
-            numLength = price.toString().length,
-            maxDecimalLength = numLength - Math.floor(price).toString().length,
+            prevclose = prevclose > 0 ? prevclose : price,
+            numLength = prevclose.toString().length,
+            maxDecimalLength = numLength - Math.floor(prevclose).toString().length,
             numeralFormat = maxDecimalLength > 0 ? '0[.]' + Array(maxDecimalLength).join('0') : '0',
-            priceDiff = numeral(price - prevclose).format(numeralFormat),
-            priceDiffPercent = numeral(priceDiff / prevclose).format('0[.]00%');
+            priceDiff = numeral(price - prevclose).format(numeralFormat);
+            
+        var priceDiffPercent = priceDiff / prevclose;
+            priceDiffPercent = priceDiffPercent < 0.0001 ? 0.0001 : priceDiffPercent;
+            priceDiffPercent = numeral(priceDiffPercent).format('0[.]00%');
 
         if(priceDiff > 0) {
             container.removeClass('up down').addClass('up');   
@@ -565,6 +581,7 @@
         //container.find('.price-current').html(price).textillate({ in: { effect: 'rotateInUpLeft' } });
         container.find('.price-diff').html(priceDiff);
         container.find('.price-diff-percent').html(priceDiffPercent);
+        container.find('.lastupdate').html(moment(cometTimestamp * 1000).format(options.dateFormat));
     }
 
 
@@ -572,6 +589,8 @@
         if(chartObj.isReady === false) {
             return false;
         }
+
+        p("Update chart shiftFlag : %s, price:%s", chartObj.shiftFlag, price);
 
         if(chartObj.shiftFlag === false) {
             chartObj.efc.setCurrent(price);
@@ -623,6 +642,7 @@
         },
 
         'dataloaded' : function(event, dataObj) {
+            //p("data loaded %o", dataObj);
             var root = this,
                 i,
                 charts = root.searchConnectedCharts(dataObj.datakey),
@@ -656,12 +676,23 @@
         },
 
         'cometcollected' : function(event) {
-            this.comet();
+            var self = this;
+            if(windowLoad) {
+                self.comet();
+            } else {
+                //to void jsonp comet make browser always show loading status
+                $(window).load(function(){
+                    windowLoad = true;
+                    setTimeout(function(){
+                        self.comet();
+                    }, 100);            
+                });            
+            }
         },
 
         'cometed' : function(event) {
             //p('cometed triggered');
-            //p("comet data : %o", cometData);
+            //p("cometed data : %o", cometData);
             //p("last comet data : %o", lastCometData);
 
             var i, 
@@ -697,7 +728,7 @@
         },
 
         'pricechanged' : function(event, symbol, price, lastPrice) {
-            //p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
+            p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
 
             var root = this,
                 i,

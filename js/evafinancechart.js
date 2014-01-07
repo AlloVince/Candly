@@ -9,11 +9,11 @@
     'use strict';
 
     //Debug shortcut
-    function p(a){
+    function p(){
         if(typeof console === 'undefined') {
             return false;
         }
-        console.log(a);
+        console.info.apply(console, arguments);
     }
         
     /************************************
@@ -23,28 +23,28 @@
     var efc = {}
         , VERSION = '1.0.0'
         , defaultOptions = {
-            container : null,
-            chartType : 'candle',
-            timezoneOffset : 0,
-            width : 0,
-            height : 0,
-            marginLeft : 3,
-            marginRight: 50,
-            marginTop : 6,
-            marginBottom : 12,
+            container : null,  //HTML Container (A jQuery selector)  | HTML容器，是一个jQuery的选择器
+            chartType : 'candle',  //candle or area
+            timezoneOffset : 0, 
+            width : 0,  //chart width
+            height : 0,  //chart height
+            marginLeft : 3,  //chart margin left
+            marginRight: 50,  //chart margin right for display y axis. | 图表右边距，用于显示Y轴
+            marginTop : 6, //chart margin top
+            marginBottom : 12, //chart margin bottom for display x axis
 
-            //x axis
-            xAxisVisibility : 'visible',
-            xAxisStroke : '#CCC',
-            xAxisShapeRendering : 'crispEdges',
+            //x axis settings
+            xAxisVisibility : 'visible',    //visible or hidden 可见性
+            xAxisStroke : '#CCC',           //X轴线颜色
+            xAxisShapeRendering : 'crispEdges',    //
             xAxisFill : 'none',
             xAxisTicks : 5,
             xAxisTickSize : 0,
-            xAxisOrient : 'bottom',
-            xAxisLabelSize : 12,
-            xAxisLabelColor : '#666',
-            dateFormatHour : 'HH:mm',
-            dateFormatDay : 'MM/DD',
+            xAxisOrient : 'bottom',    //X轴文字位置
+            xAxisLabelSize : 12,      //X轴文字大小
+            xAxisLabelColor : '#666',    //X轴文字颜色
+            dateFormatHour : 'HH:mm',     //X轴时间格式（当时间为小时分钟时）
+            dateFormatDay : 'MM/DD',      //X轴时间格式（当时间为日期时）
             dateFormatYear : 'YYYY',
 
             //y axis
@@ -189,7 +189,7 @@
                 'border' : '1px solid #E3F4FF'
             }, 
             tooltipxWidth : 95,
-            tooltipxFormat : 'L hh:mm',
+            tooltipxFormat : 'L HH:mm',
             tooltipyStyle : {
                 'display' : 'inline-block',
                 'position' : 'absolute',
@@ -399,7 +399,6 @@
             height : height + 'px'
         });
 
-        ui.watermark = ui.chart.append('g').attr('class', 'efc-watermark-layer');
 
         ui.xAxis = ui.chart.append('g').attr('class', 'efc-xaxis')
             .attr('transform', 'translate(0,' + innerHeight + ')') ;
@@ -415,6 +414,9 @@
         
         ui.boardarea = ui.chart.append('g').attr('class', 'efc-boardarea');
 
+        //Watermark is above chart
+        ui.watermark = ui.chart.append('g').attr('class', 'efc-watermark-layer');
+
         ui.prevcloseLine = ui.chart.append('g').attr('class', 'efc-prevclose-layer');
 
         ui.rangeLine = ui.chart.append('g').attr('class', 'efc-range-layer');
@@ -422,6 +424,7 @@
         ui.currentLine = ui.chart.append('g').attr('class', 'efc-current-layer');
 
         ui.crossLine = ui.chart.append('g').attr('class', 'efc-cross-layer');
+
 
         ui.tooltip = d3.select(container.get(0)).append('div').attr('class', 'efc-tooltip');
         for(key in options.tooltipStyle) {
@@ -535,25 +538,15 @@
             data = root._data;
 
 
-        var domainDiff = (status.priceMax - status.priceMin) / 20;
+        var domainDiff = (status.priceMax - status.priceMin) / 10;
 
-        if(status.maxNumLength > 2) {
-            var yAxisMax = status.priceMax + domainDiff, //add 5% domain offset
-            yAxisMin = status.priceMin - domainDiff,
-            yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? prevClose + domainDiff : yAxisMax,
-            yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? prevClose - domainDiff : yAxisMin;
+        var yAxisMax = status.priceMax + domainDiff, //add 5% domain offset
+        yAxisMin = status.priceMin - domainDiff,
+        yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? prevClose + domainDiff : yAxisMax,
+        yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? prevClose - domainDiff : yAxisMin;
 
-            yAxisMax = current > 0 && current >= yAxisMax ? current + domainDiff : yAxisMax,
-            yAxisMin = current > 0 && current <= yAxisMin ? current - domainDiff : yAxisMin;
-        } else {
-            var yAxisMax = Math.ceil(status.priceMax + domainDiff), //add 10% domain offset
-            yAxisMin = Math.floor(status.priceMin - domainDiff),
-            yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? Math.ceil(prevClose + domainDiff) : yAxisMax,
-            yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? Math.floor(prevClose - domainDiff) : yAxisMin;
-            
-            yAxisMax = current > 0 && current >= yAxisMax ? Math.ceil(current + domainDiff) : yAxisMax,
-            yAxisMin = current > 0 && current <= yAxisMin ? Math.floor(current - domainDiff) : yAxisMin;
-        }
+        yAxisMax = current > 0 && current >= yAxisMax ? current + domainDiff : yAxisMax,
+        yAxisMin = current > 0 && current <= yAxisMin ? current - domainDiff : yAxisMin;
 
         var y = d3.scale.linear().domain([yAxisMin, yAxisMax]).range([status.innerHeight, 0]),
             yAxis = d3.svg.axis().scale(y)
@@ -641,23 +634,31 @@
             var priceMin = chartData[0].low,
                 priceMax = chartData[0].high,
                 maxNumLength = chartData[0].price.toString().length,
-                interval = chartData[1] - chartData[0];
+                interval = chartData[1] - chartData[0],
+                dataLen = chartData.length;
 
             //js timestamp is ms
             chartData = $.map(chartData, function(n, i){
                 n.index =  i;
                 maxNumLength = maxNumLength > n.price.toString().length ? maxNumLength : n.price.toString().length;
 
-                //interval MUST be caculated here before *1000
-                if(typeof chartData[i + 1] !== 'undefined') {
-                    interval = interval >= chartData[i + 1].start - n.start ? interval : chartData[i + 1].start - n.start;
-                }
                 n.start = n.start > 2000000000 ? n.start : (n.start - options.timezoneOffset) * 1000;
                 n.end = n.end > 2000000000 ? n.end : (n.end - options.timezoneOffset) * 1000;
                 priceMin = priceMin < n.low ? priceMin : n.low;
                 priceMax = priceMax > n.high ? priceMax : n.high;
 
                 return n;
+            });
+
+            //for get correct interval, skiped last point
+            $.map(chartData, function(n, i){
+                if(i > dataLen - 2) {
+                    return;
+                }
+                //get the smallest start timestamp between 2 points as interval
+                if(typeof chartData[i + 1] !== 'undefined') {
+                    interval = interval < chartData[i + 1].start - n.start ? interval : chartData[i + 1].start - n.start;
+                }
             });
 
             //Longest num after .
@@ -687,7 +688,7 @@
         }
 
         , setPrevClose : function(num){
-            this._prevClose = num;
+            this._prevClose = parseFloat(num);
             return this;
         }
 
@@ -713,16 +714,35 @@
             return this;
         }
 
-        , shiftData : function(price) {
+        , getLastUpdate : function() {
             var data = this._data,
+                i = 0,
+                len = data.length;
+            if(len < 1) {
+                return false;
+            }
+
+            return data[len - 1].timestamp;
+        }
+
+        , shiftData : function(price, timestamp) {
+            var data = this._data,
+                status = this._status,
                 i = 0,
                 len = data.length,
                 lastPoint = data[len - 1],
                 point = $.extend({}, lastPoint),
-                timestamp = new Date().getTime();
+                timestamp = timestamp || new Date().getTime();
 
-            point.open = lastPoint.close;
-            point.close = point.open;
+
+            point.close = price;
+
+            //make last new drew candle open = prev close 
+            if(timestamp - lastPoint.end <= status.interval) {
+                point.open = lastPoint.close;
+            } else {
+                point.open = price;
+            }
             point.start = timestamp;
             point.end = timestamp;
             point.price = price;
@@ -731,6 +751,7 @@
 
             data.shift();
             data.push(point);
+            //p("Shift data : last point %o", point);
             this.setCurrent(point.price);
             this.setData(data);
             return this;
@@ -1094,7 +1115,10 @@
                 .attr('y1', function(d) { return status.y(d.high);})
                 .attr('y2', function(d) { return status.y(d.low); })
                 .attr('stroke-width', options.candleLineWidth)
-                .attr('stroke', function(d){ return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; });
+                .attr('stroke', function(d){ 
+                    return d.open > d.close ? options.candleLineDownColor : options.candleLineDownColor; 
+                });
+
 
             ui.boardcandle.selectAll('rect.efc-chartcandle-body')
                 .data(data)
