@@ -327,7 +327,7 @@
 
             p("Before GC chartPool length : %s", chartPool.length);
             for(i in chartPool) {
-                if(!page.has(chartPool[i].container[0]).length) {
+                if(chartPool[i].container && !page.has(chartPool[i].container[0]).length) {
                     p("GC : %o", chartPool[i].container[0]);
                     chartPool.splice(i, 1);
                 }
