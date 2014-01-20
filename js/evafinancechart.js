@@ -46,6 +46,8 @@
             dateFormatHour : 'HH:mm',     //X轴时间格式（当时间为小时分钟时）
             dateFormatDay : 'MM/DD',      //X轴时间格式（当时间为日期时）
             dateFormatYear : 'YYYY',
+            dateFormatFullDate : 'YY/MM/DD',
+            dateFormatFullTime : 'YYYY/MM/DD HH:mm',
 
             //y axis
             yAxisVisibility : 'visible',
@@ -109,6 +111,7 @@
             prevcloseLineColor : '#D95151',
             prevcloseLineWidth : 1,
             prevcloseLineShapeRendering : 'crispEdges',
+            prevcloseLineStrokeDasharray : 'none',
 
             //rangeLine
             rangeLineEnable : false,
@@ -166,10 +169,10 @@
             tooltipStyle  : {
                 'display' : 'block',
                 //'width' : '110px',
-                'padding' : '10px 15px 8px',
+                'padding' : '6px 10px 4px',
                 'line-height' : '20px',
                 'position' : 'absolute',
-                'font-size' : '13px',
+                'font-size' : '12px',
                 'color' : '#fff',
                 'background' : 'rgb(57, 157, 179)',
                 'border-radius' : '10px',
@@ -189,7 +192,7 @@
                 'border' : '1px solid #E3F4FF'
             }, 
             tooltipxWidth : 95,
-            tooltipxFormat : 'L HH:mm',
+            tooltipxFormat : 'YYYY/MM/DD HH:mm',
             tooltipyStyle : {
                 'display' : 'inline-block',
                 'position' : 'absolute',
@@ -449,7 +452,8 @@
             container = root._container,
             status = root._status,
             ui = root._ui,
-            data = root._data;
+            data = root._data,
+            interval = status.interval;
         
         var x = d3.scale.linear()
                 .domain([0, data.length -1])
@@ -474,20 +478,29 @@
                     return nowMoment.format(options.dateFormatHour);
                 } else {
 
+                    var dayInterval = 3600 * 24 * 1000;
                     var nowDate = nowMoment.format('YYYYMMDD');
                     //Display date for first one
                     if(i < 1) {
-                        return nowMoment.format(options.dateFormatDay);
-                    } else {
-                        var step = xAxisLabels[1] - xAxisLabels[0];
-                        var lastDate = moment(data[i - step].start).format('YYYYMMDD');
-
-                        if(nowDate == lastDate) {
-                            return nowMoment.format(options.dateFormatHour);
+                        if(interval >= dayInterval) {
+                            return nowMoment.format(options.dateFormatFullDate);
                         } else {
                             return nowMoment.format(options.dateFormatDay);
                         }
-                    
+                    } else {
+                        var step = xAxisLabels[1] - xAxisLabels[0];
+                        var lastDate = moment(data[i - step].start).format('YYYYMMDD');
+                        var lastYear = moment(data[i - step].start).format('YYYY');
+
+                        if(interval >= dayInterval) {
+                            return nowMoment.format(options.dateFormatFullDate);
+                        } else {
+                            if(nowDate == lastDate) {
+                                return nowMoment.format(options.dateFormatHour);
+                            } else {
+                                return nowMoment.format(options.dateFormatDay);
+                            }                        
+                        }
                     }
                 }
             })
@@ -535,18 +548,29 @@
             ui = root._ui,
             prevClose = root._prevClose,
             current = root._current,
-            data = root._data;
+            data = root._data,
+            numeralFormat = status.numeralFormat + 3;
 
 
-        var domainDiff = (status.priceMax - status.priceMin) / 10;
+        var domainDiff = numeral(status.priceMax).subtract(status.priceMin).divide(10).value();
 
-        var yAxisMax = status.priceMax + domainDiff, //add 5% domain offset
-        yAxisMin = status.priceMin - domainDiff,
-        yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? prevClose + domainDiff : yAxisMax,
-        yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? prevClose - domainDiff : yAxisMin;
+        /*
+        p(typeof status.priceMax);
+        p(status.priceMax);
+        p(typeof status.priceMin);
+        p(status.priceMin);
+        p(typeof prevClose);
+        p(prevClose);
+       */
+        var yAxisMax = numeral(status.priceMax).add(domainDiff).value(), //add 5% domain offset
+        yAxisMin = numeral(status.priceMin).subtract(domainDiff).value(),
+        yAxisMax = prevClose > 0 && prevClose >= yAxisMax ? numeral(prevClose).add(domainDiff).value() : yAxisMax,
+        yAxisMin = prevClose > 0 && prevClose <= yAxisMin ? numeral(prevClose).subtract(domainDiff).value() : yAxisMin;
 
-        yAxisMax = current > 0 && current >= yAxisMax ? current + domainDiff : yAxisMax,
-        yAxisMin = current > 0 && current <= yAxisMin ? current - domainDiff : yAxisMin;
+        yAxisMax = current > 0 && current >= yAxisMax ? numeral(current).add(domainDiff).value() : yAxisMax,
+        yAxisMin = current > 0 && current <= yAxisMin ? numeral(current).subtract(domainDiff).value() : yAxisMin;
+
+        //p("domainDiff %d, yAxisMin %d, yAxisMax %d", domainDiff, yAxisMin, yAxisMax);
 
         var y = d3.scale.linear().domain([yAxisMin, yAxisMax]).range([status.innerHeight, 0]),
             yAxis = d3.svg.axis().scale(y)
@@ -670,7 +694,7 @@
             status.timestampMax = chartData[chartData.length - 1].start;
             status.maxNumLength = maxNumLength;
             status.interval = interval;
-            status.numeralFormat = maxNumLength > 0 ? '0.' + Array(maxNumLength).join('0') : '0';
+            status.numeralFormat = maxNumLength > 0 ? '0.' + Array(maxNumLength + 1).join('0') : '0';
             this._data = chartData;
 
 
@@ -854,18 +878,27 @@
             }
             var y = status.y(prevClosePrice);
 
-            ui.prevcloseLine.select('line.efc-prevclose-line').remove();
-            ui.prevcloseLine
-                .append('svg:line')
-                .attr('class', 'efc-prevclose-line')
+            var line = ui.prevcloseLine.select('line.efc-prevclose-line').empty() ?
+                ui.prevcloseLine.append('svg:line').attr('class', 'efc-prevclose-line') :
+                ui.prevcloseLine.select('line.efc-prevclose-line');
+
+            line
                 .attr('x1', 0)
                 .attr('x2', status.innerWidth)
                 .attr('y1', y)
                 .attr('y2', y)
+                .attr('visibility', 'visible')
                 .attr('shape-rendering', options.prevcloseLineShapeRendering)
+                .attr('stroke-dasharray', options.prevcloseLineStrokeDasharray)
                 .attr('stroke', options.prevcloseLineColor)
                 .attr('stroke-width', options.prevcloseLineWidth);
 
+            return this;
+        }
+
+        , hidePrevCloseLine : function() {
+            var ui = this._ui;       
+            ui.prevcloseLine.select('line.efc-prevclose-line').attr('visibility', 'hidden');
             return this;
         }
 
@@ -1421,6 +1454,11 @@
         
         var tooltipxX = x < marginLeft ? marginLeft : x;
             tooltipxX =  x + tooltipxWidth > innerWidth ? innerWidth - tooltipxWidth : tooltipxX;
+
+        //Not display hour:minute in day/week/month chart
+        if(status.interval >= 3600 * 24 * 1000) {
+            format = options.dateFormatFullDate;
+        }
         
         ui.tooltipx.style('visibility', 'visible');
         ui.tooltipx.html(moment(point.start).format(format));
@@ -1454,7 +1492,13 @@
         ui.tooltip.style('visibility', 'visible');
         ui.tooltip.style('left', tooltipX + 'px');
         ui.tooltip.style('top', tooltipY + 'px');
-        ui.tooltip.html(_.template(options.tooltipTmpl, { p : point}));    
+        
+        var tooltipPoint = $.extend({}, point);
+        $.each(['open', 'close', 'high', 'low', 'price'], function(index, i) {
+            //point[i] = numeral(point[i]).format(status.numeralFormat);
+            tooltipPoint[i] = parseFloat(tooltipPoint[i]).toFixed(status.maxNumLength);
+        });
+        ui.tooltip.html(_.template(options.tooltipTmpl, { p : tooltipPoint}));    
 
         if(chartType == 'area') {
             ui.tooltip.style('visibility', 'hidden');

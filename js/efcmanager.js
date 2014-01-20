@@ -97,15 +97,15 @@
         , defaultOptions = {
             efcSelector : '.efc',
             cometSelector : '*[data-comet]',
-            dataType : 'json',
+            dataType : 'jsonp',
             events : {},
             chartEnable : true,
             cometEnable : true,
             cometType : 'polling',  //or comet
             cometInterval : 2000,      //default polling interval
-            dateFormat : 'L HH:mm',
-            chartUrl : '/data.php',
-            cometUrl : '/comet.php'
+            dateFormat : 'YYYY/MM/DD HH:mm',
+            chartUrl : 'http://api.markets.wallstreetcn.com/v1/chart',
+            cometUrl : 'http://api.markets.wallstreetcn.com/v1/price'
         }
         , defaultDataObj = {
               uriObj : null,
@@ -310,12 +310,13 @@
                 chartObj = this.getChartObj(container),
                 symbol = chartChanger.attr('data-efc-symbol') || chartObj.symbol,
                 interval = chartChanger.attr('data-efc-interval') || chartObj.interval,
-                rows = chartChanger.attr('data^efc-rows') || chartObj.rows;
+                rows = chartChanger.attr('data-efc-rows') || chartObj.rows;
 
             chartObj.symbol = symbol;
             chartObj.interval = interval;
             chartObj.rows = rows;
             chartObj.shiftFlag = false;
+            p("chart change %o, data : %a", chartObj, chartObj.efc.getStatus());
 
 
             this.trigger('chartchange', [chartObj]);
@@ -325,14 +326,14 @@
             var i = 0,
                 page = $('body');
 
-            p("Before GC chartPool length : %s", chartPool.length);
+            //p("Before GC chartPool length : %s", chartPool.length);
             for(i in chartPool) {
                 if(chartPool[i].container && !page.has(chartPool[i].container[0]).length) {
                     p("GC : %o", chartPool[i].container[0]);
                     chartPool.splice(i, 1);
                 }
             }
-            p("After GC chartPool length : %s", chartPool.length);
+            //p("After GC chartPool length : %s", chartPool.length);
             
         }
 
@@ -478,7 +479,7 @@
             }
             symbols = _.uniq(symbols);
             symbolString = symbols.join('_');
-            p('comet strings : %s', symbolString);
+            //p('comet strings : %s', symbolString);
 
             cometRequestHandler = $.ajax({
                 url : options.cometUrl,
@@ -562,13 +563,17 @@
             prevclose = container.find('.prevclose').val(),
             prevclose = prevclose > 0 ? prevclose : price,
             numLength = prevclose.toString().length,
+            priceNumLength = price.toString().length,
+            numLength = priceNumLength > numLength ? priceNumLength : numLength,
             maxDecimalLength = numLength - Math.floor(prevclose).toString().length,
-            numeralFormat = maxDecimalLength > 0 ? '0[.]' + Array(maxDecimalLength).join('0') : '0',
-            priceDiff = numeral(price - prevclose).format(numeralFormat);
+            numeralFormat = maxDecimalLength > 0 ? '0.' + Array(maxDecimalLength).join('0') : '0',
+            priceDiff = numeral(price).subtract(prevclose).value();//.format(numeralFormat);
             
-        var priceDiffPercent = priceDiff / prevclose;
-            priceDiffPercent = priceDiffPercent < 0.0001 ? 0.0001 : priceDiffPercent;
-            priceDiffPercent = numeral(priceDiffPercent).format('0[.]00%');
+        var priceDiffPercent = numeral(priceDiff).divide(prevclose).value();
+            priceDiffPercent = Math.abs(priceDiffPercent) < 0.0001 ? 0 : priceDiffPercent;
+            priceDiffPercent = numeral(priceDiffPercent).format('0.00%');
+
+            priceDiff = numeral(priceDiff).format(numeralFormat);
 
         if(priceDiff > 0) {
             container.removeClass('up down').addClass('up');   
@@ -590,7 +595,15 @@
             return false;
         }
 
-        p("Update chart shiftFlag : %s, price:%s", chartObj.shiftFlag, price);
+        //Not enable animation for IE
+        if($('html').hasClass('lt-ie9')) {
+            chartObj.efc.off('mouseleave');
+            chartObj.efc.off('mousemoveonarea');
+            chartObj.efc.off('mousemoveoncandle');
+            return false;
+        }
+
+        //p("Update chart shiftFlag : %s, price:%s", chartObj.shiftFlag, price);
 
         if(chartObj.shiftFlag === false) {
             chartObj.efc.setCurrent(price);
@@ -617,9 +630,18 @@
             if(!dataObj) {
                 return this.addDataObj(chartObj);
             }
+
+            var oldData = chartObj.efc.getData();
             chartObj.efc.setData(dataObj.data);
-            chartObj.efc.updateChart();
-            chartObj.efc.updateCurrentLine();
+            //data length not same, force refresh chart
+            if(oldData.length != dataObj.data.length) {
+                chartObj.efc.drawChart();
+            } else {
+                chartObj.efc.updateChart();
+                chartObj.efc.updateCurrentLine();
+            }
+
+
             this.trigger('chartupdated', [chartObj]);
         },
         
@@ -681,12 +703,10 @@
                 self.comet();
             } else {
                 //to void jsonp comet make browser always show loading status
-                $(window).load(function(){
+                setTimeout(function(){
                     windowLoad = true;
-                    setTimeout(function(){
-                        self.comet();
-                    }, 100);            
-                });            
+                    self.comet();
+                }, 100);            
             }
         },
 
@@ -728,7 +748,7 @@
         },
 
         'pricechanged' : function(event, symbol, price, lastPrice) {
-            p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
+            //p('pricechanged triggered %s, price : %s, lastPrice : %s', symbol, price, lastPrice);
 
             var root = this,
                 i,
@@ -783,6 +803,9 @@
             //TODO: not chartObj here will recollect memory
             for(i in charts) {
                 chartObj = charts[i];
+                if(!chartObj.efc) {
+                    continue;
+                }
                 chartObj.efc.setData(dataObj.data);
                 chartObj.efc.updateChart();
                 root.trigger('chartrefreshed', [chartObj]);
